@@ -1,5 +1,5 @@
 export type VariantId = "original" | "filling" | "tabur_celup" | "filling_tabur_celup";
-export type SizeId = "regular" | "jumbo";
+export type PriceTier = "normal" | "kuantar";
 
 export type Filling = "Mentai" | "Garlic" | "Cheese";
 export type Celup = "Barbeque Spicy" | "Sadis" | "Teriyaki" | "Lada Hitam";
@@ -24,56 +24,61 @@ export const VARIANTS: ProductVariant[] = [
   { id: "filling_tabur_celup", name: "CCR Filling + Tabur / Celup", description: "Pilih 1 isian + 1 saus", needsFilling: true, allowsSauce: true },
 ];
 
-export interface PriceMap {
-  // key: `${variantId}:${size}`
-  [key: string]: number;
+export interface PriceEntry {
+  normal: number;
+  kuantar: number;
 }
+
+export type PriceMap = Record<VariantId, PriceEntry>;
 
 export interface Settings {
   prices: PriceMap;
-  deliveryFee: number;
   pin: string;
   sheetsEndpoint: string;
+  invoiceCounter: number;
 }
 
 export const DEFAULT_PRICES: PriceMap = {
-  "original:regular": 15000,
-  "filling:regular": 17000,
-  "tabur_celup:regular": 18000,
-  "filling_tabur_celup:regular": 20000,
-  "original:jumbo": 25000,
-  "filling:jumbo": 27000,
-  "tabur_celup:jumbo": 28000,
-  "filling_tabur_celup:jumbo": 30000,
+  original: { normal: 10000, kuantar: 12000 },
+  filling: { normal: 12000, kuantar: 14500 },
+  tabur_celup: { normal: 15000, kuantar: 17500 },
+  filling_tabur_celup: { normal: 18000, kuantar: 21000 },
 };
 
 export const DEFAULT_SETTINGS: Settings = {
   prices: DEFAULT_PRICES,
-  deliveryFee: 2500,
   pin: "1234",
   sheetsEndpoint: "",
+  invoiceCounter: 0,
 };
 
 export interface CartItem {
   id: string;
   variantId: VariantId;
   variantName: string;
-  size: SizeId;
   filling?: Filling;
   celup?: Celup;
   tabur?: Tabur;
-  unitPrice: number;
   quantity: number;
 }
 
 export type PaymentMethod = "Cash" | "QRIS" | "Kuantar";
 
+export function tierForPayment(pm: PaymentMethod): PriceTier {
+  return pm === "Kuantar" ? "kuantar" : "normal";
+}
+
+export interface TransactionItem extends CartItem {
+  unitPrice: number;
+  priceTier: PriceTier;
+}
+
 export interface Transaction {
   id: string;
   timestamp: string;
-  items: CartItem[];
+  items: TransactionItem[];
   subtotal: number;
-  deliveryFee: number;
   grandTotal: number;
   paymentMethod: PaymentMethod;
+  priceTier: PriceTier;
 }
