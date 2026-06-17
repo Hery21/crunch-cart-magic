@@ -68,7 +68,12 @@ export function loadCart<T>(): T | null {
   if (typeof window === "undefined") return null;
   try {
     const raw = localStorage.getItem(CART_KEY);
-    return raw ? JSON.parse(raw) : null;
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (Array.isArray(parsed)) {
+      return parsed.map((i: Record<string, unknown>) => ({ size: "regular", ...i })) as unknown as T;
+    }
+    return parsed as T;
   } catch {
     return null;
   }
