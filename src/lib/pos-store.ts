@@ -75,6 +75,7 @@ export async function pushToSheets(endpoint: string, tx: Transaction): Promise<b
       timestamp: tx.timestamp,
       transactionId: tx.id,
       productName: item.variantName,
+      size: item.size === "jumbo" ? "Jumbo" : "Regular",
       filling: item.filling ?? "",
       celup: item.celup ?? "",
       tabur: item.tabur ?? "",
