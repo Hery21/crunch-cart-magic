@@ -83,12 +83,12 @@ function PosPage() {
     return () => clearTimeout(t);
   }, [paymentMethod]);
 
-  function priceFor(variantId: VariantId, t: PriceTier = tier): number {
-    return settings.prices[variantId]?.[t] ?? 0;
+  function priceFor(variantId: VariantId, size: Size, t: PriceTier = tier): number {
+    return settings.prices[variantId]?.[size]?.[t] ?? 0;
   }
 
   const cartWithPrices = useMemo(
-    () => cart.map((i) => ({ ...i, unitPrice: priceFor(i.variantId), priceTier: tier })),
+    () => cart.map((i) => ({ ...i, unitPrice: priceFor(i.variantId, i.size), priceTier: tier })),
     [cart, settings.prices, tier],
   );
   const subtotal = useMemo(
