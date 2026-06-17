@@ -521,24 +521,27 @@ function CartPanel({
 
 function CustomizeDialog({
   variantId,
-  unitPrice,
+  prices,
   tier,
   onClose,
   onAdd,
 }: {
   variantId: VariantId;
-  unitPrice: number;
+  prices: import("@/lib/pos-types").PriceEntry;
   tier: PriceTier;
   onClose: () => void;
   onAdd: (item: CartItem) => void;
 }) {
   const variant = VARIANTS.find((v) => v.id === variantId)!;
+  const [size, setSize] = useState<Size>("regular");
   const [filling, setFilling] = useState<Filling | undefined>();
   const [sauceMode, setSauceMode] = useState<"none" | "celup" | "tabur">("none");
   const [celup, setCelup] = useState<Celup | undefined>();
   const [tabur, setTabur] = useState<Tabur | undefined>();
   const [qty, setQty] = useState(1);
   const [error, setError] = useState("");
+
+  const unitPrice = prices[size][tier];
 
   function handleAdd() {
     if (variant.needsFilling && !filling) {
@@ -549,6 +552,7 @@ function CustomizeDialog({
       id: crypto.randomUUID(),
       variantId,
       variantName: variant.name,
+      size,
       filling: variant.needsFilling ? filling : undefined,
       celup: variant.allowsSauce && sauceMode === "celup" ? celup : undefined,
       tabur: variant.allowsSauce && sauceMode === "tabur" ? tabur : undefined,
@@ -565,9 +569,27 @@ function CustomizeDialog({
         <p className="text-sm">
           <span className="font-bold text-primary">{formatRp(unitPrice)}</span>
           <span className="ml-2 text-xs text-muted-foreground">
-            ({tier === "kuantar" ? "Kuantar" : "Normal"})
+            ({SIZE_LABEL[size]} • {tier === "kuantar" ? "Kuantar" : "Normal"})
           </span>
         </p>
+
+        <Section title="Pilih Ukuran (wajib)" required>
+          <div className="grid grid-cols-2 gap-2">
+            {SIZES.map((s) => (
+              <button
+                key={s}
+                onClick={() => setSize(s)}
+                className={`rounded-xl border-2 p-3 text-center transition ${
+                  size === s ? "border-primary bg-accent" : "border-border bg-background hover:border-primary/50"
+                }`}
+              >
+                <p className="text-sm font-bold">{SIZE_LABEL[s]}</p>
+                <p className="text-xs text-primary font-semibold">{formatRp(prices[s][tier])}</p>
+              </button>
+            ))}
+          </div>
+        </Section>
+
 
         {variant.needsFilling && (
           <Section title="Pilih Isian (wajib)" required>
