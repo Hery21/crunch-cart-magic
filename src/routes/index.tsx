@@ -264,7 +264,7 @@ function PosPage() {
       {activeVariant && (
         <CustomizeDialog
           variantId={activeVariant}
-          unitPrice={priceFor(activeVariant)}
+          prices={settings.prices[activeVariant]}
           tier={tier}
           onClose={() => setActiveVariant(null)}
           onAdd={(item) => {
