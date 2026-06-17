@@ -116,7 +116,7 @@ function Dashboard({
 
   function exportCSV() {
     const headers = [
-      "timestamp","transactionId","product","filling","celup","tabur",
+      "timestamp","transactionId","product","size","filling","celup","tabur",
       "quantity","priceTier","unitPrice","subtotal","paymentMethod","grandTotal",
     ];
     const rows: string[] = [headers.join(",")];
@@ -124,6 +124,7 @@ function Dashboard({
       tx.items.forEach((i) => {
         rows.push([
           tx.timestamp, tx.id, `"${i.variantName}"`,
+          i.size === "jumbo" ? "Jumbo" : "Regular",
           i.filling ?? "", i.celup ?? "", i.tabur ?? "",
           i.quantity, i.priceTier === "kuantar" ? "Kuantar" : "Normal",
           i.unitPrice, i.unitPrice * i.quantity, tx.paymentMethod, tx.grandTotal,
