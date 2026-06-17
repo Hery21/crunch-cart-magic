@@ -6,6 +6,8 @@ import {
   FILLINGS,
   CELUPS,
   TABURS,
+  SIZES,
+  SIZE_LABEL,
   tierForPayment,
   type VariantId,
   type Filling,
@@ -14,6 +16,7 @@ import {
   type CartItem,
   type PaymentMethod,
   type PriceTier,
+  type Size,
   type Transaction,
   type TransactionItem,
 } from "@/lib/pos-types";
