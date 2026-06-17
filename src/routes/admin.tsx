@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { ArrowLeft, Download, LogOut, Search } from "lucide-react";
-import { VARIANTS, DEFAULT_SETTINGS, type VariantId, type PriceTier } from "@/lib/pos-types";
+import { VARIANTS, DEFAULT_SETTINGS, type VariantId, type PriceTier, type Size } from "@/lib/pos-types";
 import { loadSettings, saveSettings, loadTransactions, formatRp } from "@/lib/pos-store";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
