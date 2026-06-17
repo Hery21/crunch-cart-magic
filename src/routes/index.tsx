@@ -700,7 +700,7 @@ function Receipt({ tx }: { tx: Transaction }) {
       {tx.items.map((i) => (
         <div key={i.id} className="mb-1">
           <div className="flex justify-between">
-            <span>{i.variantName} x{i.quantity}</span>
+            <span>{i.variantName} ({SIZE_LABEL[i.size]}) x{i.quantity}</span>
             <span>{formatRp(i.unitPrice * i.quantity)}</span>
           </div>
           {(i.filling || i.celup || i.tabur) && (
