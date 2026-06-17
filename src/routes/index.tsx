@@ -6,6 +6,8 @@ import {
   FILLINGS,
   CELUPS,
   TABURS,
+  SIZES,
+  SIZE_LABEL,
   tierForPayment,
   type VariantId,
   type Filling,
@@ -14,6 +16,7 @@ import {
   type CartItem,
   type PaymentMethod,
   type PriceTier,
+  type Size,
   type Transaction,
   type TransactionItem,
 } from "@/lib/pos-types";
@@ -80,12 +83,12 @@ function PosPage() {
     return () => clearTimeout(t);
   }, [paymentMethod]);
 
-  function priceFor(variantId: VariantId, t: PriceTier = tier): number {
-    return settings.prices[variantId]?.[t] ?? 0;
+  function priceFor(variantId: VariantId, size: Size, t: PriceTier = tier): number {
+    return settings.prices[variantId]?.[size]?.[t] ?? 0;
   }
 
   const cartWithPrices = useMemo(
-    () => cart.map((i) => ({ ...i, unitPrice: priceFor(i.variantId), priceTier: tier })),
+    () => cart.map((i) => ({ ...i, unitPrice: priceFor(i.variantId, i.size), priceTier: tier })),
     [cart, settings.prices, tier],
   );
   const subtotal = useMemo(
@@ -115,6 +118,7 @@ function PosPage() {
       id: i.id,
       variantId: i.variantId,
       variantName: i.variantName,
+      size: i.size,
       filling: i.filling,
       celup: i.celup,
       tabur: i.tabur,
@@ -188,13 +192,22 @@ function PosPage() {
                     <h3 className="font-bold leading-tight">{v.name}</h3>
                     <p className="text-xs text-muted-foreground">{v.description}</p>
                   </div>
-                  <div className="flex items-baseline justify-between">
-                    <span className="text-lg font-extrabold text-primary">
-                      {formatRp(priceFor(v.id))}
-                    </span>
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-                      {tier === "kuantar" ? "Kuantar" : "Normal"} • Normal {formatRp(priceFor(v.id, "normal"))} / Kuantar {formatRp(priceFor(v.id, "kuantar"))}
-                    </span>
+                  <div className="space-y-1">
+                    <div className="flex items-baseline justify-between gap-2">
+                      <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Regular</span>
+                      <span className="text-base font-extrabold text-primary">
+                        {formatRp(priceFor(v.id, "regular"))}
+                      </span>
+                    </div>
+                    <div className="flex items-baseline justify-between gap-2">
+                      <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Jumbo</span>
+                      <span className="text-base font-extrabold text-primary">
+                        {formatRp(priceFor(v.id, "jumbo"))}
+                      </span>
+                    </div>
+                    <p className="pt-1 text-[10px] uppercase tracking-wider text-muted-foreground">
+                      Tarif {tier === "kuantar" ? "Kuantar" : "Normal"}
+                    </p>
                   </div>
                 </div>
               </button>
@@ -251,7 +264,7 @@ function PosPage() {
       {activeVariant && (
         <CustomizeDialog
           variantId={activeVariant}
-          unitPrice={priceFor(activeVariant)}
+          prices={settings.prices[activeVariant]}
           tier={tier}
           onClose={() => setActiveVariant(null)}
           onAdd={(item) => {
@@ -442,6 +455,9 @@ function CartPanel({
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-1.5">
                     <p className="truncate text-sm font-semibold">{item.variantName}</p>
+                    <span className="shrink-0 rounded-full bg-amber-500/20 px-2 py-0.5 text-[10px] font-bold uppercase text-amber-800">
+                      {SIZE_LABEL[item.size]}
+                    </span>
                     <span className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold uppercase ${
                       item.priceTier === "kuantar" ? "bg-orange-500/20 text-orange-700" : "bg-emerald-500/20 text-emerald-700"
                     }`}>
@@ -505,24 +521,27 @@ function CartPanel({
 
 function CustomizeDialog({
   variantId,
-  unitPrice,
+  prices,
   tier,
   onClose,
   onAdd,
 }: {
   variantId: VariantId;
-  unitPrice: number;
+  prices: import("@/lib/pos-types").PriceEntry;
   tier: PriceTier;
   onClose: () => void;
   onAdd: (item: CartItem) => void;
 }) {
   const variant = VARIANTS.find((v) => v.id === variantId)!;
+  const [size, setSize] = useState<Size>("regular");
   const [filling, setFilling] = useState<Filling | undefined>();
   const [sauceMode, setSauceMode] = useState<"none" | "celup" | "tabur">("none");
   const [celup, setCelup] = useState<Celup | undefined>();
   const [tabur, setTabur] = useState<Tabur | undefined>();
   const [qty, setQty] = useState(1);
   const [error, setError] = useState("");
+
+  const unitPrice = prices[size][tier];
 
   function handleAdd() {
     if (variant.needsFilling && !filling) {
@@ -533,6 +552,7 @@ function CustomizeDialog({
       id: crypto.randomUUID(),
       variantId,
       variantName: variant.name,
+      size,
       filling: variant.needsFilling ? filling : undefined,
       celup: variant.allowsSauce && sauceMode === "celup" ? celup : undefined,
       tabur: variant.allowsSauce && sauceMode === "tabur" ? tabur : undefined,
@@ -549,9 +569,27 @@ function CustomizeDialog({
         <p className="text-sm">
           <span className="font-bold text-primary">{formatRp(unitPrice)}</span>
           <span className="ml-2 text-xs text-muted-foreground">
-            ({tier === "kuantar" ? "Kuantar" : "Normal"})
+            ({SIZE_LABEL[size]} • {tier === "kuantar" ? "Kuantar" : "Normal"})
           </span>
         </p>
+
+        <Section title="Pilih Ukuran (wajib)" required>
+          <div className="grid grid-cols-2 gap-2">
+            {SIZES.map((s) => (
+              <button
+                key={s}
+                onClick={() => setSize(s)}
+                className={`rounded-xl border-2 p-3 text-center transition ${
+                  size === s ? "border-primary bg-accent" : "border-border bg-background hover:border-primary/50"
+                }`}
+              >
+                <p className="text-sm font-bold">{SIZE_LABEL[s]}</p>
+                <p className="text-xs text-primary font-semibold">{formatRp(prices[s][tier])}</p>
+              </button>
+            ))}
+          </div>
+        </Section>
+
 
         {variant.needsFilling && (
           <Section title="Pilih Isian (wajib)" required>
@@ -662,7 +700,7 @@ function Receipt({ tx }: { tx: Transaction }) {
       {tx.items.map((i) => (
         <div key={i.id} className="mb-1">
           <div className="flex justify-between">
-            <span>{i.variantName} x{i.quantity}</span>
+            <span>{i.variantName} ({SIZE_LABEL[i.size]}) x{i.quantity}</span>
             <span>{formatRp(i.unitPrice * i.quantity)}</span>
           </div>
           {(i.filling || i.celup || i.tabur) && (

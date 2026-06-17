@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { ArrowLeft, Download, LogOut, Search } from "lucide-react";
-import { VARIANTS, DEFAULT_SETTINGS, type VariantId, type PriceTier } from "@/lib/pos-types";
+import { VARIANTS, DEFAULT_SETTINGS, type VariantId, type PriceTier, type Size } from "@/lib/pos-types";
 import { loadSettings, saveSettings, loadTransactions, formatRp } from "@/lib/pos-store";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -116,7 +116,7 @@ function Dashboard({
 
   function exportCSV() {
     const headers = [
-      "timestamp","transactionId","product","filling","celup","tabur",
+      "timestamp","transactionId","product","size","filling","celup","tabur",
       "quantity","priceTier","unitPrice","subtotal","paymentMethod","grandTotal",
     ];
     const rows: string[] = [headers.join(",")];
@@ -124,6 +124,7 @@ function Dashboard({
       tx.items.forEach((i) => {
         rows.push([
           tx.timestamp, tx.id, `"${i.variantName}"`,
+          i.size === "jumbo" ? "Jumbo" : "Regular",
           i.filling ?? "", i.celup ?? "", i.tabur ?? "",
           i.quantity, i.priceTier === "kuantar" ? "Kuantar" : "Normal",
           i.unitPrice, i.unitPrice * i.quantity, tx.paymentMethod, tx.grandTotal,
@@ -315,14 +316,20 @@ function PriceManager({
 }) {
   const [prices, setPrices] = useState(() => JSON.parse(JSON.stringify(settings.prices)) as typeof settings.prices);
 
-  function setPrice(variantId: VariantId, tier: PriceTier, value: number) {
-    setPrices((p) => ({ ...p, [variantId]: { ...p[variantId], [tier]: value } }));
+  function setPrice(variantId: VariantId, size: Size, tier: PriceTier, value: number) {
+    setPrices((p) => ({
+      ...p,
+      [variantId]: {
+        ...p[variantId],
+        [size]: { ...p[variantId][size], [tier]: value },
+      },
+    }));
   }
 
   return (
     <div className="space-y-4">
       <div className="rounded-2xl border border-border bg-card p-4">
-        <h2 className="mb-1 font-bold">Manajemen Harga</h2>
+        <h2 className="mb-1 font-bold">Manajemen Harga (16 harga)</h2>
         <p className="mb-4 text-xs text-muted-foreground">
           Tarif <b>Normal</b> berlaku untuk Cash & QRIS. Tarif <b>Kuantar</b> berlaku otomatis saat metode bayar Kuantar dipilih (tanpa biaya antar tambahan).
         </p>
@@ -330,28 +337,38 @@ function PriceManager({
           {VARIANTS.map((v) => (
             <div key={v.id} className="rounded-xl border border-border/70 p-3">
               <p className="mb-2 font-semibold">{v.name}</p>
-              <div className="grid gap-3 sm:grid-cols-2">
-                <label className="block text-sm">
-                  <span className="mb-1 block text-xs font-bold uppercase tracking-wider text-emerald-700">Normal (Cash/QRIS)</span>
-                  <Input
-                    type="number"
-                    value={prices[v.id]?.normal ?? 0}
-                    onChange={(e) => setPrice(v.id, "normal", Number(e.target.value))}
-                  />
-                </label>
-                <label className="block text-sm">
-                  <span className="mb-1 block text-xs font-bold uppercase tracking-wider text-orange-700">Kuantar</span>
-                  <Input
-                    type="number"
-                    value={prices[v.id]?.kuantar ?? 0}
-                    onChange={(e) => setPrice(v.id, "kuantar", Number(e.target.value))}
-                  />
-                </label>
+              <div className="space-y-3">
+                {(["regular", "jumbo"] as Size[]).map((s) => (
+                  <div key={s} className="rounded-lg border border-border/50 bg-muted/30 p-3">
+                    <p className="mb-2 text-xs font-bold uppercase tracking-wider text-amber-800">
+                      {s === "jumbo" ? "Jumbo" : "Regular"}
+                    </p>
+                    <div className="grid gap-3 sm:grid-cols-2">
+                      <label className="block text-sm">
+                        <span className="mb-1 block text-xs font-bold uppercase tracking-wider text-emerald-700">Normal (Cash/QRIS)</span>
+                        <Input
+                          type="number"
+                          value={prices[v.id]?.[s]?.normal ?? 0}
+                          onChange={(e) => setPrice(v.id, s, "normal", Number(e.target.value))}
+                        />
+                      </label>
+                      <label className="block text-sm">
+                        <span className="mb-1 block text-xs font-bold uppercase tracking-wider text-orange-700">Kuantar</span>
+                        <Input
+                          type="number"
+                          value={prices[v.id]?.[s]?.kuantar ?? 0}
+                          onChange={(e) => setPrice(v.id, s, "kuantar", Number(e.target.value))}
+                        />
+                      </label>
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
           ))}
         </div>
       </div>
+
 
       <div className="flex gap-2">
         <Button onClick={() => onSave({ ...settings, prices })} size="lg">Simpan</Button>

@@ -11,10 +11,26 @@ export function loadSettings(): Settings {
     const raw = localStorage.getItem(SETTINGS_KEY);
     if (!raw) return DEFAULT_SETTINGS;
     const parsed = JSON.parse(raw);
+    const incoming = parsed.prices ?? {};
+    const migrated: Record<string, unknown> = {};
+    for (const k of Object.keys(DEFAULT_PRICES) as (keyof typeof DEFAULT_PRICES)[]) {
+      const v = incoming[k];
+      if (v && typeof v === "object" && "regular" in v && "jumbo" in v) {
+        migrated[k] = v;
+      } else if (v && typeof v === "object" && ("normal" in v || "kuantar" in v)) {
+        // Legacy flat shape — promote to regular, derive jumbo from defaults.
+        migrated[k] = {
+          regular: { normal: v.normal ?? DEFAULT_PRICES[k].regular.normal, kuantar: v.kuantar ?? DEFAULT_PRICES[k].regular.kuantar },
+          jumbo: DEFAULT_PRICES[k].jumbo,
+        };
+      } else {
+        migrated[k] = DEFAULT_PRICES[k];
+      }
+    }
     return {
       ...DEFAULT_SETTINGS,
       ...parsed,
-      prices: { ...DEFAULT_PRICES, ...(parsed.prices ?? {}) },
+      prices: migrated as Settings["prices"],
     };
   } catch {
     return DEFAULT_SETTINGS;
@@ -52,7 +68,12 @@ export function loadCart<T>(): T | null {
   if (typeof window === "undefined") return null;
   try {
     const raw = localStorage.getItem(CART_KEY);
-    return raw ? JSON.parse(raw) : null;
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (Array.isArray(parsed)) {
+      return parsed.map((i: Record<string, unknown>) => ({ size: "regular", ...i })) as unknown as T;
+    }
+    return parsed as T;
   } catch {
     return null;
   }
@@ -75,6 +96,7 @@ export async function pushToSheets(endpoint: string, tx: Transaction): Promise<b
       timestamp: tx.timestamp,
       transactionId: tx.id,
       productName: item.variantName,
+      size: item.size === "jumbo" ? "Jumbo" : "Regular",
       filling: item.filling ?? "",
       celup: item.celup ?? "",
       tabur: item.tabur ?? "",
