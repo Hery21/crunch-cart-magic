@@ -192,13 +192,22 @@ function PosPage() {
                     <h3 className="font-bold leading-tight">{v.name}</h3>
                     <p className="text-xs text-muted-foreground">{v.description}</p>
                   </div>
-                  <div className="flex items-baseline justify-between">
-                    <span className="text-lg font-extrabold text-primary">
-                      {formatRp(priceFor(v.id))}
-                    </span>
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-                      {tier === "kuantar" ? "Kuantar" : "Normal"} • Normal {formatRp(priceFor(v.id, "normal"))} / Kuantar {formatRp(priceFor(v.id, "kuantar"))}
-                    </span>
+                  <div className="space-y-1">
+                    <div className="flex items-baseline justify-between gap-2">
+                      <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Regular</span>
+                      <span className="text-base font-extrabold text-primary">
+                        {formatRp(priceFor(v.id, "regular"))}
+                      </span>
+                    </div>
+                    <div className="flex items-baseline justify-between gap-2">
+                      <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Jumbo</span>
+                      <span className="text-base font-extrabold text-primary">
+                        {formatRp(priceFor(v.id, "jumbo"))}
+                      </span>
+                    </div>
+                    <p className="pt-1 text-[10px] uppercase tracking-wider text-muted-foreground">
+                      Tarif {tier === "kuantar" ? "Kuantar" : "Normal"}
+                    </p>
                   </div>
                 </div>
               </button>
