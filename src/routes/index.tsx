@@ -118,6 +118,7 @@ function PosPage() {
       id: i.id,
       variantId: i.variantId,
       variantName: i.variantName,
+      size: i.size,
       filling: i.filling,
       celup: i.celup,
       tabur: i.tabur,
