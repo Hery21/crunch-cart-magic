@@ -1,5 +1,9 @@
 export type VariantId = "original" | "filling" | "tabur_celup" | "filling_tabur_celup";
 export type PriceTier = "normal" | "kuantar";
+export type Size = "regular" | "jumbo";
+
+export const SIZES: Size[] = ["regular", "jumbo"];
+export const SIZE_LABEL: Record<Size, string> = { regular: "Regular", jumbo: "Jumbo" };
 
 export type Filling = "Mentai" | "Garlic" | "Cheese";
 export type Celup = "Barbeque Spicy" | "Sadis" | "Teriyaki" | "Lada Hitam";
@@ -24,9 +28,13 @@ export const VARIANTS: ProductVariant[] = [
   { id: "filling_tabur_celup", name: "CCR Filling + Tabur / Celup", description: "Pilih 1 isian + 1 saus", needsFilling: true, allowsSauce: true },
 ];
 
-export interface PriceEntry {
+export interface TierPrices {
   normal: number;
   kuantar: number;
+}
+export interface PriceEntry {
+  regular: TierPrices;
+  jumbo: TierPrices;
 }
 
 export type PriceMap = Record<VariantId, PriceEntry>;
@@ -39,10 +47,22 @@ export interface Settings {
 }
 
 export const DEFAULT_PRICES: PriceMap = {
-  original: { normal: 10000, kuantar: 12000 },
-  filling: { normal: 12000, kuantar: 14500 },
-  tabur_celup: { normal: 15000, kuantar: 17500 },
-  filling_tabur_celup: { normal: 18000, kuantar: 21000 },
+  original: {
+    regular: { normal: 10000, kuantar: 12000 },
+    jumbo: { normal: 15000, kuantar: 17000 },
+  },
+  filling: {
+    regular: { normal: 12000, kuantar: 14500 },
+    jumbo: { normal: 17000, kuantar: 19500 },
+  },
+  tabur_celup: {
+    regular: { normal: 15000, kuantar: 17500 },
+    jumbo: { normal: 20000, kuantar: 22500 },
+  },
+  filling_tabur_celup: {
+    regular: { normal: 18000, kuantar: 21000 },
+    jumbo: { normal: 23000, kuantar: 26000 },
+  },
 };
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -56,6 +76,7 @@ export interface CartItem {
   id: string;
   variantId: VariantId;
   variantName: string;
+  size: Size;
   filling?: Filling;
   celup?: Celup;
   tabur?: Tabur;
