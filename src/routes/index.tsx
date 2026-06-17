@@ -455,6 +455,9 @@ function CartPanel({
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-1.5">
                     <p className="truncate text-sm font-semibold">{item.variantName}</p>
+                    <span className="shrink-0 rounded-full bg-amber-500/20 px-2 py-0.5 text-[10px] font-bold uppercase text-amber-800">
+                      {SIZE_LABEL[item.size]}
+                    </span>
                     <span className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold uppercase ${
                       item.priceTier === "kuantar" ? "bg-orange-500/20 text-orange-700" : "bg-emerald-500/20 text-emerald-700"
                     }`}>
