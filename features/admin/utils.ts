@@ -1,6 +1,6 @@
-import type { Transaction } from '@/lib/pos-types';
+import type { Transaction } from "@/lib/pos-types";
 
-export type Range = 'today' | 'week' | 'all';
+export type Range = "today" | "week" | "all";
 
 export function filterTransactions(
   transactions: Transaction[],
@@ -8,14 +8,18 @@ export function filterTransactions(
   search: string,
 ): Transaction[] {
   const now = new Date();
-  const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+  const startOfToday = new Date(
+    now.getFullYear(),
+    now.getMonth(),
+    now.getDate(),
+  ).getTime();
   const startOfWeek = startOfToday - now.getDay() * 86400000;
   const q = search.trim().toLowerCase();
 
   return transactions.filter((tx) => {
     const t = new Date(tx.timestamp).getTime();
-    if (range === 'today' && t < startOfToday) return false;
-    if (range === 'week' && t < startOfWeek) return false;
+    if (range === "today" && t < startOfToday) return false;
+    if (range === "week" && t < startOfWeek) return false;
     if (q) {
       const hit =
         tx.id.toLowerCase().includes(q) ||

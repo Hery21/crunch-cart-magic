@@ -1,7 +1,14 @@
-import { DEFAULT_SETTINGS } from '@/lib/pos-types';
-import { C, R } from '@/lib/theme';
-import { Alert, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
-import { useState } from 'react';
+import { DEFAULT_SETTINGS } from "@/lib/pos-types";
+import { C, R } from "@/lib/theme";
+import { useState } from "react";
+import {
+  Alert,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from "react-native";
 
 interface Props {
   settings: typeof DEFAULT_SETTINGS;
@@ -19,7 +26,7 @@ export default function SettingsPanel({ settings, onSave }: Props) {
         <TextInput
           style={s.textInput}
           value={pin}
-          onChangeText={(t) => setPin(t.replace(/\D/g, '').slice(0, 4))}
+          onChangeText={(t) => setPin(t.replace(/\D/g, "").slice(0, 4))}
           placeholder="4 digit"
           placeholderTextColor={C.mutedFg}
           keyboardType="numeric"
@@ -30,7 +37,8 @@ export default function SettingsPanel({ settings, onSave }: Props) {
       <View style={s.card}>
         <Text style={s.cardTitle}>Google Sheets Endpoint</Text>
         <Text style={s.cardDesc}>
-          URL Web App Apps Script untuk menerima data transaksi. Kosongkan untuk hanya menyimpan lokal.
+          URL Web App Apps Script untuk menerima data transaksi. Kosongkan untuk
+          hanya menyimpan lokal.
         </Text>
         <TextInput
           style={s.textInput}
@@ -45,7 +53,10 @@ export default function SettingsPanel({ settings, onSave }: Props) {
       <TouchableOpacity
         style={s.btnPrimary}
         onPress={() => {
-          if (pin.length !== 4) { Alert.alert('Error', 'PIN harus 4 digit'); return; }
+          if (pin.length !== 4) {
+            Alert.alert("Error", "PIN harus 4 digit");
+            return;
+          }
           onSave({ ...settings, pin, sheetsEndpoint: endpoint });
         }}
       >
@@ -56,10 +67,46 @@ export default function SettingsPanel({ settings, onSave }: Props) {
 }
 
 const s = StyleSheet.create({
-  card: { borderWidth: 1, borderColor: C.border, borderRadius: R['2xl'], backgroundColor: C.card, padding: 14 },
-  cardTitle: { fontFamily: 'Poppins_700Bold', fontSize: 15, color: C.foreground, marginBottom: 4 },
-  cardDesc: { fontFamily: 'Poppins_400Regular', fontSize: 11, color: C.mutedFg, marginBottom: 4 },
-  textInput: { borderWidth: 1, borderColor: C.border, borderRadius: R.xl, paddingVertical: 10, paddingHorizontal: 14, fontFamily: 'Poppins_400Regular', fontSize: 13, color: C.foreground, backgroundColor: C.background, marginTop: 8 },
-  btnPrimary: { backgroundColor: C.primary, borderRadius: R.xl, paddingVertical: 13, alignItems: 'center' },
-  btnPrimaryText: { fontFamily: 'Poppins_700Bold', fontSize: 14, color: C.primaryFg },
+  card: {
+    borderWidth: 1,
+    borderColor: C.border,
+    borderRadius: R["2xl"],
+    backgroundColor: C.card,
+    padding: 14,
+  },
+  cardTitle: {
+    fontFamily: "Poppins_700Bold",
+    fontSize: 15,
+    color: C.foreground,
+    marginBottom: 4,
+  },
+  cardDesc: {
+    fontFamily: "Poppins_400Regular",
+    fontSize: 11,
+    color: C.mutedFg,
+    marginBottom: 4,
+  },
+  textInput: {
+    borderWidth: 1,
+    borderColor: C.border,
+    borderRadius: R.xl,
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    fontFamily: "Poppins_400Regular",
+    fontSize: 13,
+    color: C.foreground,
+    backgroundColor: C.background,
+    marginTop: 8,
+  },
+  btnPrimary: {
+    backgroundColor: C.primary,
+    borderRadius: R.xl,
+    paddingVertical: 13,
+    alignItems: "center",
+  },
+  btnPrimaryText: {
+    fontFamily: "Poppins_700Bold",
+    fontSize: 14,
+    color: C.primaryFg,
+  },
 });

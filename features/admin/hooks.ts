@@ -1,10 +1,10 @@
-import { loadSettings } from '@/lib/pos-store';
-import { useEffect, useState } from 'react';
+import { loadSettings } from "@/lib/pos-store";
+import { useEffect, useState } from "react";
 
 export function useAdminAuth() {
   const [authed, setAuthed] = useState(false);
-  const [pin, setPin] = useState('');
-  const [storedPin, setStoredPin] = useState('1234');
+  const [pin, setPin] = useState("");
+  const [storedPin, setStoredPin] = useState("1234");
 
   useEffect(() => {
     loadSettings().then((s) => setStoredPin(s.pin));
@@ -13,7 +13,7 @@ export function useAdminAuth() {
   function tryLogin(): boolean {
     if (pin !== storedPin) return false;
     setAuthed(true);
-    setPin('');
+    setPin("");
     return true;
   }
 

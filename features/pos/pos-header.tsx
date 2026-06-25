@@ -1,14 +1,14 @@
-import { C, R } from '@/lib/theme';
-import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
-import { router } from 'expo-router';
-import { LinearGradient } from 'expo-linear-gradient';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import type { PaymentMethod } from '@/lib/pos-types';
+import type { PaymentMethod } from "@/lib/pos-types";
+import { C, R } from "@/lib/theme";
+import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
+import { LinearGradient } from "expo-linear-gradient";
+import { router } from "expo-router";
+import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 
 const PAYMENT_METHODS = [
-  { id: 'Cash' as const, icon: 'wallet-outline', label: 'Cash' },
-  { id: 'QRIS' as const, icon: 'qr-code-outline', label: 'QRIS' },
-  { id: 'Kuantar' as const, iconSet: 'mci', icon: 'bike', label: 'Kuantar' },
+  { id: "Cash" as const, icon: "wallet-outline", label: "Cash" },
+  { id: "QRIS" as const, icon: "qr-code-outline", label: "QRIS" },
+  { id: "Kuantar" as const, iconSet: "mci", icon: "bike", label: "Kuantar" },
 ];
 
 interface Props {
@@ -17,15 +17,28 @@ interface Props {
   onChangePayment: (pm: PaymentMethod) => void;
 }
 
-export default function PosHeader({ clock, paymentMethod, onChangePayment }: Props) {
+export default function PosHeader({
+  clock,
+  paymentMethod,
+  onChangePayment,
+}: Props) {
   return (
-    <LinearGradient colors={[C.warm, C.primary]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}>
+    <LinearGradient
+      colors={[C.warm, C.primary]}
+      start={{ x: 0, y: 0 }}
+      end={{ x: 1, y: 0 }}
+    >
       <View style={s.headerTop}>
         <View style={{ flex: 1 }}>
-          <Text style={s.headerTitle} numberOfLines={1}>🍗 CHICKEN CRUNCHY ROLL</Text>
+          <Text style={s.headerTitle} numberOfLines={1}>
+            🍗 CHICKEN CRUNCHY ROLL
+          </Text>
           <Text style={s.headerSub}>Kasir Resmi • {clock}</Text>
         </View>
-        <TouchableOpacity style={s.adminBtn} onPress={() => router.push('/admin')}>
+        <TouchableOpacity
+          style={s.adminBtn}
+          onPress={() => router.push("/admin")}
+        >
           <Text style={s.adminBtnText}>Admin</Text>
         </TouchableOpacity>
       </View>
@@ -39,10 +52,22 @@ export default function PosHeader({ clock, paymentMethod, onChangePayment }: Pro
               onPress={() => onChangePayment(pm.id)}
               style={[s.payPill, active && s.payPillActive]}
             >
-              {pm.iconSet === 'mci'
-                ? <MaterialCommunityIcons name={pm.icon as 'bike'} size={14} color={active ? C.primary : '#fff'} />
-                : <Ionicons name={pm.icon as 'wallet-outline'} size={14} color={active ? C.primary : '#fff'} />}
-              <Text style={[s.payPillText, active && s.payPillTextActive]}>{pm.label}</Text>
+              {pm.iconSet === "mci" ? (
+                <MaterialCommunityIcons
+                  name={pm.icon as "bike"}
+                  size={14}
+                  color={active ? C.primary : "#fff"}
+                />
+              ) : (
+                <Ionicons
+                  name={pm.icon as "wallet-outline"}
+                  size={14}
+                  color={active ? C.primary : "#fff"}
+                />
+              )}
+              <Text style={[s.payPillText, active && s.payPillTextActive]}>
+                {pm.label}
+              </Text>
             </TouchableOpacity>
           );
         })}
@@ -52,15 +77,66 @@ export default function PosHeader({ clock, paymentMethod, onChangePayment }: Pro
 }
 
 const s = StyleSheet.create({
-  headerTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 12, gap: 12 },
-  headerTitle: { fontFamily: 'Poppins_800ExtraBold', fontSize: 18, color: C.warmFg },
-  headerSub: { fontFamily: 'Poppins_400Regular', fontSize: 12, color: C.warmFg, opacity: 0.9 },
-  adminBtn: { backgroundColor: 'rgba(255,255,255,0.15)', borderRadius: R.full, paddingHorizontal: 12, paddingVertical: 6, borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)' },
-  adminBtnText: { fontFamily: 'Poppins_600SemiBold', fontSize: 12, color: C.warmFg },
-  payBar: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: 'rgba(0,0,0,0.1)', paddingHorizontal: 16, paddingVertical: 8, borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.1)' },
-  payBarLabel: { fontFamily: 'Poppins_700Bold', fontSize: 10, color: C.warmFg, opacity: 0.8, textTransform: 'uppercase', letterSpacing: 0.5 },
-  payPill: { flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: 'rgba(255,255,255,0.15)', borderRadius: R.full, paddingHorizontal: 12, paddingVertical: 6 },
-  payPillActive: { backgroundColor: '#fff' },
-  payPillText: { fontFamily: 'Poppins_700Bold', fontSize: 12, color: '#fff' },
+  headerTop: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    gap: 12,
+  },
+  headerTitle: {
+    fontFamily: "Poppins_800ExtraBold",
+    fontSize: 18,
+    color: C.warmFg,
+  },
+  headerSub: {
+    fontFamily: "Poppins_400Regular",
+    fontSize: 12,
+    color: C.warmFg,
+    opacity: 0.9,
+  },
+  adminBtn: {
+    backgroundColor: "rgba(255,255,255,0.15)",
+    borderRadius: R.full,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.2)",
+  },
+  adminBtnText: {
+    fontFamily: "Poppins_600SemiBold",
+    fontSize: 12,
+    color: C.warmFg,
+  },
+  payBar: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    backgroundColor: "rgba(0,0,0,0.1)",
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderTopWidth: 1,
+    borderTopColor: "rgba(255,255,255,0.1)",
+  },
+  payBarLabel: {
+    fontFamily: "Poppins_700Bold",
+    fontSize: 10,
+    color: C.warmFg,
+    opacity: 0.8,
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+  },
+  payPill: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    backgroundColor: "rgba(255,255,255,0.15)",
+    borderRadius: R.full,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+  },
+  payPillActive: { backgroundColor: "#fff" },
+  payPillText: { fontFamily: "Poppins_700Bold", fontSize: 12, color: "#fff" },
   payPillTextActive: { color: C.primary },
 });
