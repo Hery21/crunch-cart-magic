@@ -144,7 +144,7 @@ export function ConfirmDialog({
               Metode: <Text style={s.bold}>{paymentMethod}</Text>
             </Text>
             <Text style={s.line}>
-              Tarif:{" "}
+              Harga:{" "}
               <Text style={s.bold}>
                 {tier === "kuantar" ? "Kuantar" : "Normal"}
               </Text>
@@ -219,7 +219,7 @@ export function ReceiptDialog({ receipt, onClose }: ReceiptDialogProps) {
                   },
                 ]}
               >
-                Tarif {receipt.priceTier === "kuantar" ? "Kuantar" : "Normal"}
+                Harga {receipt.priceTier === "kuantar" ? "Kuantar" : "Normal"}
               </Text>
               <View style={s.receiptDivider} />
               {receipt.items.map((i) => (

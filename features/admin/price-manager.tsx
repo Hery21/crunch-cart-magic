@@ -45,8 +45,8 @@ export default function PriceManager({ settings, onSave }: Props) {
       <View style={s.card}>
         <Text style={s.cardTitle}>Manajemen Harga (16 harga)</Text>
         <Text style={s.cardDesc}>
-          Tarif <Text style={{ fontFamily: "Poppins_700Bold" }}>Normal</Text>{" "}
-          berlaku untuk Cash & QRIS. Tarif{" "}
+          Harga <Text style={{ fontFamily: "Poppins_700Bold" }}>Normal</Text>{" "}
+          berlaku untuk Cash & QRIS. Harga{" "}
           <Text style={{ fontFamily: "Poppins_700Bold" }}>Kuantar</Text> berlaku
           otomatis saat metode bayar Kuantar dipilih.
         </Text>

@@ -42,10 +42,10 @@ export default function CartSheet({
     >
       <View style={s.overlay}>
         <TouchableOpacity style={s.dismiss} onPress={onClose} />
-        <View style={s.sheet}>
+        <View className="cart-sheet" style={s.sheet}>
           <View style={s.handle} />
           <Text style={s.title}>Keranjang</Text>
-          <ScrollView style={{ maxHeight: "70%" }}>
+          <ScrollView>
             {cart.length === 0 ? (
               <View style={s.empty}>
                 <Text style={s.emptyText}>Belum ada item.</Text>
@@ -168,8 +168,8 @@ const s = StyleSheet.create({
     borderTopRightRadius: 24,
     paddingHorizontal: 16,
     paddingTop: 12,
-    paddingBottom: 16,
-    maxHeight: "90%",
+    // paddingBottom: 16,
+    maxHeight: "100%",
   },
   handle: {
     width: 40,

@@ -1,180 +1,305 @@
+// features/pos/transaction-tab.tsx
 import { formatRp, loadTransactions } from "@/lib/pos-store";
-import type { Transaction } from "@/lib/pos-types";
+import type { PaymentMethod, Transaction } from "@/lib/pos-types";
 import { C, R } from "@/lib/theme";
 import { Ionicons } from "@expo/vector-icons";
+import DateTimePicker, {
+  type DateTimePickerEvent,
+} from "@react-native-community/datetimepicker";
 import { useEffect, useMemo, useState } from "react";
 import {
+  ScrollView,
   StyleSheet,
   Text,
-  TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
-import StatCard from "./stat-card";
-import { filterTransactions, getTodayStats, type Range } from "./utils";
+import TransactionCard from "../components/TransactionCard";
+
+const PAYMENT_METHODS: PaymentMethod[] = ["Cash", "QRIS", "Kuantar"];
 
 export default function TransactionTab() {
-  const [transactions, setTransactions] = useState<Transaction[]>([]);
-  const [range, setRange] = useState<Range>("today");
-  const [search, setSearch] = useState("");
+  const [allTransactions, setAllTransactions] = useState<Transaction[]>([]);
+  const [startDate, setStartDate] = useState<Date | null>(null);
+  const [endDate, setEndDate] = useState<Date | null>(null);
+  const [selectedPayment, setSelectedPayment] = useState<PaymentMethod | "">(
+    "",
+  );
+  const [showPicker, setShowPicker] = useState(false);
+  const [pickerMode, setPickerMode] = useState<"start" | "end">("start");
 
   useEffect(() => {
-    loadTransactions().then(setTransactions);
+    loadTransactions().then(setAllTransactions);
   }, []);
 
-  const filtered = useMemo(
-    () => filterTransactions(transactions, range, search),
-    [transactions, range, search],
-  );
-  const { todayTx, todaySales, avg } = useMemo(
-    () => getTodayStats(transactions),
-    [transactions],
-  );
+  const toDateString = (d: Date | null): string =>
+    d ? d.toISOString().slice(0, 10) : "";
+
+  const startStr = toDateString(startDate);
+  const endStr = toDateString(endDate);
+
+  const handleDateChange = (event: DateTimePickerEvent, selected?: Date) => {
+    setShowPicker(false);
+    if (selected) {
+      if (pickerMode === "start") setStartDate(selected);
+      else setEndDate(selected);
+    }
+  };
+
+  const filtered = useMemo(() => {
+    let result = allTransactions;
+    if (startStr || endStr) {
+      result = result.filter((tx) => {
+        const txDate = new Date(tx.timestamp).toISOString().slice(0, 10);
+        if (startStr && txDate < startStr) return false;
+        if (endStr && txDate > endStr) return false;
+        return true;
+      });
+    }
+    if (selectedPayment) {
+      result = result.filter((tx) => tx.paymentMethod === selectedPayment);
+    }
+    return result;
+  }, [allTransactions, startStr, endStr, selectedPayment]);
+
+  const totalRevenue = filtered.reduce((sum, tx) => sum + tx.grandTotal, 0);
+  const totalOrders = filtered.length;
 
   return (
-    <View style={{ gap: 14 }}>
-      <View style={s.statsGrid}>
-        <StatCard label="Penjualan Hari Ini" value={formatRp(todaySales)} />
-        <StatCard label="Transaksi Hari Ini" value={String(todayTx.length)} />
-        <StatCard label="Rata-rata Order" value={formatRp(avg)} />
-      </View>
+    <ScrollView
+      style={{ flex: 1 }}
+      contentContainerStyle={s.scrollContent}
+      stickyHeaderIndices={[0]} // makes the first child sticky
+      showsVerticalScrollIndicator={false}
+    >
+      {/* Sticky header: summary + filter */}
+      <View style={s.stickyHeader}>
+        <View style={s.summaryRow}>
+          <View style={s.summaryCard}>
+            <Text style={s.summaryValue}>{totalOrders}</Text>
+            <Text style={s.summaryLabel}>Transaksi</Text>
+          </View>
+          <View style={s.summaryCard}>
+            <Text style={[s.summaryValue, { color: C.primary }]}>
+              {formatRp(totalRevenue)}
+            </Text>
+            <Text style={s.summaryLabel}>Pendapatan</Text>
+          </View>
+        </View>
 
-      <View style={s.filterBox}>
-        <View style={s.rangeRow}>
-          {(["today", "week", "all"] as Range[]).map((k) => {
-            const labels: Record<Range, string> = {
-              today: "Hari Ini",
-              week: "Minggu Ini",
-              all: "Semua",
-            };
-            return (
+        <View style={s.filterContainer}>
+          <Text style={s.filterLabel}>Rentang Tanggal</Text>
+          <View style={s.dateRow}>
+            <TouchableOpacity
+              style={s.dateButton}
+              onPress={() => {
+                setPickerMode("start");
+                setShowPicker(true);
+              }}
+            >
+              <Ionicons
+                name="calendar-outline"
+                size={14}
+                color={startDate ? C.foreground : C.mutedFg}
+                style={{ marginRight: 4 }}
+              />
+              <Text style={[s.dateButtonText, !startDate && s.placeholder]}>
+                {startDate?.toLocaleDateString("id-ID", {
+                  day: "numeric",
+                  month: "short",
+                  year: "numeric",
+                }) ?? "Dari"}
+              </Text>
+            </TouchableOpacity>
+            <Text style={s.dateSeparator}>–</Text>
+            <TouchableOpacity
+              style={s.dateButton}
+              onPress={() => {
+                setPickerMode("end");
+                setShowPicker(true);
+              }}
+            >
+              <Ionicons
+                name="calendar-outline"
+                size={14}
+                color={endDate ? C.foreground : C.mutedFg}
+                style={{ marginRight: 4 }}
+              />
+              <Text style={[s.dateButtonText, !endDate && s.placeholder]}>
+                {endDate?.toLocaleDateString("id-ID", {
+                  day: "numeric",
+                  month: "short",
+                  year: "numeric",
+                }) ?? "Sampai"}
+              </Text>
+            </TouchableOpacity>
+          </View>
+          {showPicker && (
+            <DateTimePicker
+              value={
+                pickerMode === "start"
+                  ? (startDate ?? new Date())
+                  : (endDate ?? new Date())
+              }
+              mode="date"
+              display="default"
+              onChange={handleDateChange}
+            />
+          )}
+          <Text style={s.filterLabel}>Metode Pembayaran</Text>
+          <View style={s.paymentPills}>
+            <TouchableOpacity
+              style={[s.pill, selectedPayment === "" && s.pillActive]}
+              onPress={() => setSelectedPayment("")}
+            >
+              <Text
+                style={[s.pillText, selectedPayment === "" && s.pillTextActive]}
+              >
+                Semua
+              </Text>
+            </TouchableOpacity>
+            {PAYMENT_METHODS.map((pm) => (
               <TouchableOpacity
-                key={k}
-                onPress={() => setRange(k)}
-                style={[s.rangePill, range === k && s.rangePillActive]}
+                key={pm}
+                style={[s.pill, selectedPayment === pm && s.pillActive]}
+                onPress={() => setSelectedPayment(pm)}
               >
                 <Text
                   style={[
-                    s.rangePillText,
-                    range === k && s.rangePillTextActive,
+                    s.pillText,
+                    selectedPayment === pm && s.pillTextActive,
                   ]}
                 >
-                  {labels[k]}
+                  {pm}
                 </Text>
               </TouchableOpacity>
-            );
-          })}
-        </View>
-        <View style={s.searchRow}>
-          <Ionicons
-            name="search-outline"
-            size={16}
-            color={C.mutedFg}
-            style={{ marginRight: 6 }}
-          />
-          <TextInput
-            style={s.searchInput}
-            value={search}
-            onChangeText={setSearch}
-            placeholder="Cari ID atau produk..."
-            placeholderTextColor={C.mutedFg}
-          />
+            ))}
+          </View>
         </View>
       </View>
 
-      <View style={s.txList}>
-        {filtered.length === 0 ? (
+      {/* Transaction list (non‑sticky) */}
+      {filtered.length === 0 ? (
+        <View style={s.empty}>
+          <Ionicons name="receipt-outline" size={48} color={C.mutedFg} />
           <Text style={s.emptyText}>Tidak ada transaksi.</Text>
-        ) : (
-          filtered.map((tx) => (
-            <View key={tx.id} style={s.txCard}>
-              <View style={s.txCardHeader}>
-                <View style={{ flex: 1 }}>
-                  <Text style={s.txId}>{tx.id}</Text>
-                  <Text style={s.txTime}>
-                    {new Date(tx.timestamp).toLocaleString("id-ID")}
-                  </Text>
-                  <Text style={s.txMeta}>
-                    {tx.items.reduce((s, i) => s + i.quantity, 0)} item •{" "}
-                    {tx.paymentMethod} •{" "}
-                    {tx.priceTier === "kuantar" ? "Kuantar" : "Normal"}
-                  </Text>
-                </View>
-                <Text style={s.txTotal}>{formatRp(tx.grandTotal)}</Text>
-              </View>
-            </View>
-          ))
-        )}
-      </View>
-    </View>
+        </View>
+      ) : (
+        filtered.map((tx) => <TransactionCard key={tx.id} transaction={tx} />)
+      )}
+    </ScrollView>
   );
 }
 
 const s = StyleSheet.create({
-  statsGrid: { gap: 8 },
-  filterBox: {
+  scrollContent: {
+    paddingBottom: 32,
+  },
+  stickyHeader: {
+    backgroundColor: C.background, // opaque so content doesn't show through
+  },
+  summaryRow: {
+    flexDirection: "row",
+    gap: 10,
+    paddingHorizontal: 16,
+    paddingBottom: 8,
+  },
+  summaryCard: {
+    flex: 1,
+    backgroundColor: C.card,
+    borderRadius: R.xl,
     borderWidth: 1,
     borderColor: C.border,
-    borderRadius: R["2xl"],
-    backgroundColor: C.card,
-    padding: 14,
-    gap: 10,
+    paddingVertical: 10,
+    paddingHorizontal: 10,
+    alignItems: "center",
   },
-  rangeRow: { flexDirection: "row", flexWrap: "wrap", gap: 6 },
-  rangePill: {
-    borderRadius: R.full,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    backgroundColor: C.muted,
+  summaryValue: {
+    fontFamily: "Poppins_700Bold",
+    fontSize: 18,
+    color: C.foreground,
   },
-  rangePillActive: { backgroundColor: C.primary },
-  rangePillText: {
-    fontFamily: "Poppins_600SemiBold",
+  summaryLabel: {
+    fontFamily: "Poppins_400Regular",
     fontSize: 11,
     color: C.mutedFg,
+    marginTop: 2,
   },
-  rangePillTextActive: { color: C.primaryFg },
-  searchRow: {
+  filterContainer: {
+    paddingHorizontal: 16,
+    paddingTop: 6,
+    paddingBottom: 6,
+    backgroundColor: C.card,
+    borderBottomWidth: 1,
+    borderBottomColor: C.border,
+  },
+  filterLabel: {
+    fontFamily: "Poppins_600SemiBold",
+    fontSize: 9,
+    textTransform: "uppercase",
+    letterSpacing: 0.4,
+    color: C.mutedFg,
+    marginBottom: 4,
+    marginTop: 6,
+  },
+  dateRow: {
     flexDirection: "row",
     alignItems: "center",
-    borderWidth: 1,
-    borderColor: C.border,
-    borderRadius: R.xl,
-    paddingHorizontal: 10,
-    backgroundColor: C.background,
+    gap: 6,
   },
-  searchInput: {
+  dateButton: {
     flex: 1,
-    paddingVertical: 8,
-    fontFamily: "Poppins_400Regular",
-    fontSize: 13,
-    color: C.foreground,
-  },
-  txList: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: C.background,
     borderWidth: 1,
     borderColor: C.border,
-    borderRadius: R["2xl"],
-    backgroundColor: C.card,
-    overflow: "hidden",
+    borderRadius: R.lg,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
   },
-  txCard: { padding: 14, borderBottomWidth: 1, borderBottomColor: C.border },
-  txCardHeader: { flexDirection: "row", alignItems: "flex-start", gap: 8 },
-  txId: {
+  dateButtonText: {
     fontFamily: "Poppins_400Regular",
-    fontSize: 11,
-    color: C.mutedFg,
-    fontVariant: ["tabular-nums"],
-  },
-  txTime: {
-    fontFamily: "Poppins_400Regular",
-    fontSize: 13,
+    fontSize: 12,
     color: C.foreground,
   },
-  txMeta: { fontFamily: "Poppins_400Regular", fontSize: 11, color: C.mutedFg },
-  txTotal: { fontFamily: "Poppins_700Bold", fontSize: 14, color: C.primary },
+  placeholder: { color: C.mutedFg },
+  dateSeparator: {
+    fontFamily: "Poppins_400Regular",
+    fontSize: 12,
+    color: C.mutedFg,
+  },
+  paymentPills: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 5,
+    marginBottom: 4,
+  },
+  pill: {
+    borderWidth: 1,
+    borderColor: C.border,
+    borderRadius: R.full,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+  },
+  pillActive: {
+    borderColor: C.primary,
+    backgroundColor: C.accent,
+  },
+  pillText: {
+    fontFamily: "Poppins_600SemiBold",
+    fontSize: 11,
+    color: C.foreground,
+  },
+  pillTextActive: { color: C.primary },
+  empty: {
+    alignItems: "center",
+    marginTop: 64,
+    gap: 8,
+  },
   emptyText: {
     fontFamily: "Poppins_400Regular",
-    fontSize: 13,
+    fontSize: 15,
     color: C.mutedFg,
     textAlign: "center",
     padding: 32,

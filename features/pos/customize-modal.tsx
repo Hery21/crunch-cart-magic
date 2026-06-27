@@ -43,11 +43,11 @@ export default function CustomizeModal({
   onAdd,
 }: Props) {
   const variant = VARIANTS.find((v) => v.id === variantId)!;
+
   const [size, setSize] = useState<Size>("regular");
   const [filling, setFilling] = useState<Filling | undefined>();
-  const [sauceMode, setSauceMode] = useState<"none" | "celup" | "tabur">(
-    "none",
-  );
+  // Default to "celup" when sauce is allowed – forces immediate sub‑choice
+  const [sauceMode, setSauceMode] = useState<"celup" | "tabur">("celup");
   const [celup, setCelup] = useState<Celup | undefined>();
   const [tabur, setTabur] = useState<Tabur | undefined>();
   const [qty, setQty] = useState(1);
@@ -55,15 +55,41 @@ export default function CustomizeModal({
 
   const unitPrice = prices[size][tier];
 
+  function buildVariantName(): string {
+    const parts: string[] = [];
+
+    if (variant.needsFilling && filling) {
+      parts.push(filling);
+    }
+    if (variant.allowsSauce) {
+      const sauce = sauceMode === "celup" ? `Celup ${celup}` : `Tabur ${tabur}`;
+      if (sauce) {
+        parts.push(sauce);
+      }
+    }
+
+    return parts.length > 0 ? parts.join(" + ") : variant.name;
+  }
+
   function handleAdd() {
     if (variant.needsFilling && !filling) {
       setError("Silakan pilih isian terlebih dahulu");
       return;
     }
+    if (variant.allowsSauce) {
+      if (sauceMode === "celup" && !celup) {
+        setError("Silakan pilih saus celup terlebih dahulu");
+        return;
+      }
+      if (sauceMode === "tabur" && !tabur) {
+        setError("Silakan pilih saus tabur terlebih dahulu");
+        return;
+      }
+    }
     onAdd({
       id: Math.random().toString(36).slice(2),
       variantId,
-      variantName: variant.name,
+      variantName: buildVariantName(),
       size,
       filling: variant.needsFilling ? filling : undefined,
       celup: variant.allowsSauce && sauceMode === "celup" ? celup : undefined,
@@ -76,7 +102,7 @@ export default function CustomizeModal({
     <Modal visible animationType="slide" transparent onRequestClose={onClose}>
       <View style={s.overlay}>
         <TouchableOpacity style={s.dismiss} onPress={onClose} />
-        <View style={[s.sheet, { paddingBottom: 32 }]}>
+        <View style={[s.sheet]}>
           <View style={s.handle} />
           <ScrollView>
             <Text style={s.title}>{variant.name}</Text>
@@ -86,7 +112,7 @@ export default function CustomizeModal({
               </Text>
               {"  "}
               <Text style={s.priceSub}>
-                ({SIZE_LABEL[size]} •{" "}
+                ({SIZE_LABEL[size]} •{" Harga "}
                 {tier === "kuantar" ? "Kuantar" : "Normal"})
               </Text>
             </Text>
@@ -141,63 +167,103 @@ export default function CustomizeModal({
 
             {variant.allowsSauce && (
               <>
-                <Text style={s.sectionHeader}>PILIH SAUS (OPSIONAL)</Text>
+                <Text style={s.sectionHeader}>
+                  PILIH SAUS (WAJIB){" "}
+                  <Text style={{ color: C.destructive }}>*</Text>
+                </Text>
+                {/* Celup/Tabur toggle buttons */}
                 <View style={s.sauceModeRow}>
-                  {(["none", "celup", "tabur"] as const).map((m) => (
-                    <TouchableOpacity
-                      key={m}
-                      onPress={() => setSauceMode(m)}
-                      style={[s.sauceBtn, sauceMode === m && s.sauceBtnActive]}
+                  <TouchableOpacity
+                    onPress={() => {
+                      setSauceMode("celup");
+                      setCelup(undefined);
+                      setError("");
+                    }}
+                    style={[
+                      s.sauceBtn,
+                      sauceMode === "celup" && s.sauceBtnActive,
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        s.sauceBtnText,
+                        sauceMode === "celup" && s.sauceBtnTextActive,
+                      ]}
                     >
-                      <Text
-                        style={[
-                          s.sauceBtnText,
-                          sauceMode === m && s.sauceBtnTextActive,
-                        ]}
-                      >
-                        {m === "none"
-                          ? "Tidak"
-                          : m === "celup"
-                            ? "Celup"
-                            : "Tabur"}
-                      </Text>
-                    </TouchableOpacity>
-                  ))}
+                      Celup
+                    </Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    onPress={() => {
+                      setSauceMode("tabur");
+                      setTabur(undefined);
+                      setError("");
+                    }}
+                    style={[
+                      s.sauceBtn,
+                      sauceMode === "tabur" && s.sauceBtnActive,
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        s.sauceBtnText,
+                        sauceMode === "tabur" && s.sauceBtnTextActive,
+                      ]}
+                    >
+                      Tabur
+                    </Text>
+                  </TouchableOpacity>
                 </View>
-                {sauceMode === "celup" && (
-                  <View style={s.grid2}>
-                    {CELUPS.map((c) => (
-                      <TouchableOpacity
-                        key={c}
-                        onPress={() => setCelup(c)}
-                        style={[s.chip, celup === c && s.chipActive]}
-                      >
-                        <Text
-                          style={[s.chipText, celup === c && s.chipTextActive]}
+
+                {/* Sub‑choices for the active mode */}
+                <View style={s.sauceOptionBox}>
+                  {sauceMode === "celup" && (
+                    <View style={s.grid2}>
+                      {CELUPS.map((c) => (
+                        <TouchableOpacity
+                          key={c}
+                          onPress={() => {
+                            setCelup(c);
+                            setError("");
+                          }}
+                          style={[s.chip, celup === c && s.chipActive]}
                         >
-                          {c}
-                        </Text>
-                      </TouchableOpacity>
-                    ))}
-                  </View>
-                )}
-                {sauceMode === "tabur" && (
-                  <View style={{ gap: 8 }}>
-                    {TABURS.map((t) => (
-                      <TouchableOpacity
-                        key={t}
-                        onPress={() => setTabur(t)}
-                        style={[s.chip, tabur === t && s.chipActive]}
-                      >
-                        <Text
-                          style={[s.chipText, tabur === t && s.chipTextActive]}
+                          <Text
+                            style={[
+                              s.chipText,
+                              celup === c && s.chipTextActive,
+                            ]}
+                          >
+                            {c}
+                          </Text>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                  )}
+                  {sauceMode === "tabur" && (
+                    <View style={s.grid2}>
+                      {TABURS.map((t) => (
+                        <TouchableOpacity
+                          key={t}
+                          onPress={() => {
+                            setTabur(t);
+                            setError("");
+                          }}
+                          style={[s.chip, tabur === t && s.chipActive]}
                         >
-                          {t}
-                        </Text>
-                      </TouchableOpacity>
-                    ))}
-                  </View>
-                )}
+                          <Text
+                            style={[
+                              s.chipText,
+                              tabur === t && s.chipTextActive,
+                            ]}
+                          >
+                            {t}
+                          </Text>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                  )}
+                </View>
               </>
             )}
 
@@ -235,6 +301,7 @@ export default function CustomizeModal({
   );
 }
 
+// styles remain unchanged (only removed unused sauce-related styles if any)
 const s = StyleSheet.create({
   overlay: { flex: 1, justifyContent: "flex-end" },
   dismiss: { flex: 1, backgroundColor: "rgba(0,0,0,0.4)" },
@@ -244,8 +311,7 @@ const s = StyleSheet.create({
     borderTopRightRadius: 24,
     paddingHorizontal: 16,
     paddingTop: 12,
-    paddingBottom: 16,
-    maxHeight: "90%",
+    maxHeight: "100%",
   },
   handle: {
     width: 40,
@@ -350,5 +416,13 @@ const s = StyleSheet.create({
     fontFamily: "Poppins_700Bold",
     fontSize: 15,
     color: C.primaryFg,
+  },
+  sauceOptionBox: {
+    borderWidth: 1,
+    borderColor: C.border,
+    borderRadius: R.xl,
+    padding: 10,
+    backgroundColor: C.background,
+    marginBottom: 8,
   },
 });

@@ -26,7 +26,7 @@ export default function MenuGrid({ tier, priceFor, onSelect }: Props) {
   return (
     <ScrollView style={s.scroll} contentContainerStyle={s.scrollContent}>
       <Text style={s.sectionLabel}>
-        Menu • Tarif {tier === "kuantar" ? "Kuantar" : "Normal"}
+        Menu • Harga {tier === "kuantar" ? "Kuantar" : "Normal"}
       </Text>
       <View style={s.menuGrid}>
         {VARIANTS.map((v) => (
@@ -57,7 +57,7 @@ export default function MenuGrid({ tier, priceFor, onSelect }: Props) {
                   </View>
                 ))}
                 <Text style={s.menuCardTier}>
-                  Tarif {tier === "kuantar" ? "Kuantar" : "Normal"}
+                  Harga {tier === "kuantar" ? "Kuantar" : "Normal"}
                 </Text>
               </View>
             </View>

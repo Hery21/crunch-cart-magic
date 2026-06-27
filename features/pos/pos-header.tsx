@@ -33,17 +33,24 @@ export default function PosHeader({
           <Text style={s.headerTitle} numberOfLines={1}>
             🍗 CHICKEN CRUNCHY ROLL
           </Text>
-          <Text style={s.headerSub}>Kasir Resmi • {clock}</Text>
+          <Text style={s.headerSub}>Kasir • {clock}</Text>
         </View>
         <TouchableOpacity
-          style={s.adminBtn}
+          style={s.headerAction}
+          onPress={() => router.push("/report")}
+        >
+          <Ionicons name="document-text-outline" size={16} color={C.warmFg} />
+          <Text style={s.headerActionText}>Laporan</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={s.headerAction}
           onPress={() => router.push("/admin")}
         >
-          <Text style={s.adminBtnText}>Admin</Text>
+          <Text style={s.headerActionText}>Admin</Text>
         </TouchableOpacity>
       </View>
       <View style={s.payBar}>
-        <Text style={s.payBarLabel}>Tarif:</Text>
+        <Text style={s.payBarLabel}>Harga:</Text>
         {PAYMENT_METHODS.map((pm) => {
           const active = paymentMethod === pm.id;
           return (
@@ -95,6 +102,22 @@ const s = StyleSheet.create({
     fontSize: 12,
     color: C.warmFg,
     opacity: 0.9,
+  },
+  headerAction: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    backgroundColor: "rgba(255,255,255,0.15)",
+    borderRadius: R.full,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.2)",
+  },
+  headerActionText: {
+    fontFamily: "Poppins_600SemiBold",
+    fontSize: 12,
+    color: C.warmFg,
   },
   adminBtn: {
     backgroundColor: "rgba(255,255,255,0.15)",

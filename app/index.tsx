@@ -107,7 +107,7 @@ export default function PosScreen() {
         onPress={() => setCartOpen(true)}
         activeOpacity={0.9}
       >
-        <Text style={s.fabText}>?? Keranjang ({pos.cartCount})</Text>
+        <Text style={s.fabText}>🧺 Keranjang ({pos.cartCount})</Text>
         <View style={s.fabBadge}>
           <Text style={s.fabBadgeText}>{formatRp(pos.grandTotal)}</Text>
         </View>
@@ -136,7 +136,7 @@ export default function PosScreen() {
           onAdd={(item) => {
             pos.addToCart(item);
             setActiveVariant(null);
-            showFeedback("? Ditambahkan ke keranjang");
+            showFeedback("Ditambahkan ke keranjang");
           }}
         />
       )}
