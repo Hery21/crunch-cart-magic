@@ -1,10 +1,10 @@
 {
   "expo": {
-    "name": "react-native-test-expo",
-    "slug": "react-native-test-expo",
+    "name": "Eeriiiccc",
+    "slug": "Eeriiiccc",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/icon.png",
+    "icon": "./assets/images/Eeriiccc.jpeg",
     "scheme": "reactnativetestexpo",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
@@ -14,9 +14,9 @@
     "android": {
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
-        "foregroundImage": "./assets/images/android-icon-foreground.png",
-        "backgroundImage": "./assets/images/android-icon-background.png",
-        "monochromeImage": "./assets/images/android-icon-monochrome.png"
+        "foregroundImage": "./assets/images/Eeriiccc.jpeg",
+        "backgroundImage": "./assets/images/Eeriiccc.jpeg",
+        "monochromeImage": "./assets/images/Eeriiccc.jpeg"
       },
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
@@ -45,6 +45,12 @@
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "e3ae0f48-51aa-4eee-b217-0497f30bf841"
+      }
     }
   }
 }
