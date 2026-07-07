@@ -5,7 +5,7 @@ on:
     branches: [ master ]
 
 permissions:
-  contents: write   # 👈 Add this line
+  contents: write
 
 jobs:
   build:
