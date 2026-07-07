@@ -4,8 +4,9 @@ on:
   push:
     branches: [ master ]
 
+# 👇 Add these permissions
 permissions:
-  contents: write
+  contents: write   # Required to push to gh-pages branch
 
 jobs:
   build:
