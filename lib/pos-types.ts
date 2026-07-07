@@ -117,6 +117,7 @@ export interface CartItem {
   celup?: Celup;
   tabur?: Tabur;
   quantity: number;
+  productId: number;
 }
 
 export type PaymentMethod = "Cash" | "QRIS" | "Kuantar";

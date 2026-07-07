@@ -43,35 +43,64 @@ export default function PosScreen() {
 
   async function confirmPay() {
     setSaving(true);
-    const items: TransactionItem[] = pos.cartWithPrices.map((i) => ({
-      id: i.id,
-      variantId: i.variantId,
-      variantName: i.variantName,
-      size: i.size,
-      filling: i.filling,
-      celup: i.celup,
-      tabur: i.tabur,
-      quantity: i.quantity,
-      unitPrice: i.unitPrice,
-      priceTier: i.priceTier,
-    }));
-    const tx = {
-      id: await nextInvoiceId(),
-      timestamp: new Date().toISOString(),
-      items,
-      subtotal: pos.subtotal,
-      grandTotal: pos.grandTotal,
-      paymentMethod: pos.paymentMethod,
-      priceTier: pos.tier,
-    };
-    await saveTransaction(tx);
-    if (pos.settings?.sheetsEndpoint)
-      await pushToSheets(pos.settings.sheetsEndpoint, tx);
-    setSaving(false);
-    setConfirming(false);
-    setPayOpen(false);
-    pos.clearCart();
-    setReceipt(tx as Transaction);
+
+    try {
+      const items: TransactionItem[] = pos.cartWithPrices.map((i) => ({
+        id: i.id,
+        variantId: i.variantId,
+        variantName: i.variantName,
+        size: i.size,
+        filling: i.filling,
+        celup: i.celup,
+        tabur: i.tabur,
+        quantity: i.quantity,
+        unitPrice: i.unitPrice,
+        priceTier: i.priceTier,
+      }));
+
+      const tx = {
+        id: await nextInvoiceId(),
+        timestamp: new Date().toISOString(),
+        items,
+        subtotal: pos.subtotal,
+        grandTotal: pos.grandTotal,
+        paymentMethod: pos.paymentMethod,
+        priceTier: pos.tier,
+      };
+
+      // 1. Save locally
+      await saveTransaction(tx);
+      console.log("✅ Transaction saved locally:", tx.id);
+
+      // 2. Push to Google Sheets (if endpoint is configured)
+      if (pos.settings?.sheetsEndpoint) {
+        console.log("📤 Attempting to push to sheets:", pos.settings.sheetsEndpoint);
+        const success = await pushToSheets(pos.settings.sheetsEndpoint, tx);
+        if (success) {
+          console.log("✅ Sheets push successful");
+          showFeedback("Data tersimpan ke Google Sheets");
+        } else {
+          console.warn("⚠️ Sheets push failed but transaction saved locally");
+          showFeedback("⚠️ Gagal menyimpan ke Google Sheets, tapi data tersimpan lokal");
+        }
+      } else {
+        console.log("ℹ️ No sheets endpoint configured – saving locally only");
+      }
+
+      // 3. Reset UI (only after everything succeeds or fails gracefully)
+      setSaving(false);
+      setConfirming(false);
+      setPayOpen(false);
+      pos.clearCart();
+      setReceipt(tx as Transaction);
+
+    } catch (error) {
+      console.error("❌ Error during checkout:", error);
+      setSaving(false);
+      setConfirming(false);
+      showFeedback("❌ Gagal menyimpan transaksi");
+      // Optionally keep the cart so user can retry
+    }
   }
 
   if (!pos.settings) {

@@ -148,37 +148,158 @@ export function savePayment(pm: string): void {
   safeSetItem(PAY_KEY, pm);
 }
 
+// ============================================================
+// NEW pushToSheets: sends order header + items
+// ============================================================
+
+/**
+ * Maps a product variant + options to the integer ID in your product_catalog sheet.
+ * You can either hardcode the 64 combinations or build a dynamic lookup.
+ * This example uses a static map for clarity.
+ */
+export function getProductId(
+  variantId: string,
+  size: string,
+  filling?: string,
+  celup?: string,
+  tabur?: string
+): number {
+  // Build a unique key from the combination
+  const key = `${variantId}|${size}|${filling || ''}|${celup || ''}|${tabur || ''}`;
+  const map: Record<string, number> = {
+    'original|regular|||': 1,
+    'original|jumbo|||': 2,
+    'filling|regular|Mentai||': 3,
+    'filling|regular|Garlic||': 4,
+    'filling|regular|Cheese||': 5,
+    'filling|jumbo|Mentai||': 6,
+    'filling|jumbo|Garlic||': 7,
+    'filling|jumbo|Cheese||': 8,
+    'tabur|regular|||Barbeque Spicy': 9,
+    'tabur|regular|||Sadis': 10,
+    'tabur|regular|||Teriyaki': 11,
+    'tabur|regular|||Lada Hitam': 12,
+    'tabur|jumbo|||Barbeque Spicy': 13,
+    'tabur|jumbo|||Sadis': 14,
+    'tabur|jumbo|||Teriyaki': 15,
+    'tabur|jumbo|||Lada Hitam': 16,
+    'celup|regular||Keju|': 17,
+    'celup|regular||Balado|': 18,
+    'celup|regular||Sweet Corn|': 19,
+    'celup|jumbo||Keju|': 20,
+    'celup|jumbo||Balado|': 21,
+    'celup|jumbo||Sweet Corn|': 22,
+    'filling_tabur|regular|Mentai|Barbeque Spicy|': 23,
+    'filling_tabur|regular|Mentai|Sadis|': 24,
+    'filling_tabur|regular|Mentai|Teriyaki|': 25,
+    'filling_tabur|regular|Mentai|Lada Hitam|': 26,
+    'filling_tabur|regular|Garlic|Barbeque Spicy|': 27,
+    'filling_tabur|regular|Garlic|Sadis|': 28,
+    'filling_tabur|regular|Garlic|Teriyaki|': 29,
+    'filling_tabur|regular|Garlic|Lada Hitam|': 30,
+    'filling_tabur|regular|Cheese|Barbeque Spicy|': 31,
+    'filling_tabur|regular|Cheese|Sadis|': 32,
+    'filling_tabur|regular|Cheese|Teriyaki|': 33,
+    'filling_tabur|regular|Cheese|Lada Hitam|': 34,
+    'filling_tabur|jumbo|Mentai|Barbeque Spicy|': 35,
+    'filling_tabur|jumbo|Mentai|Sadis|': 36,
+    'filling_tabur|jumbo|Mentai|Teriyaki|': 37,
+    'filling_tabur|jumbo|Mentai|Lada Hitam|': 38,
+    'filling_tabur|jumbo|Garlic|Barbeque Spicy|': 39,
+    'filling_tabur|jumbo|Garlic|Sadis|': 40,
+    'filling_tabur|jumbo|Garlic|Teriyaki|': 41,
+    'filling_tabur|jumbo|Garlic|Lada Hitam|': 42,
+    'filling_tabur|jumbo|Cheese|Barbeque Spicy|': 43,
+    'filling_tabur|jumbo|Cheese|Sadis|': 44,
+    'filling_tabur|jumbo|Cheese|Teriyaki|': 45,
+    'filling_tabur|jumbo|Cheese|Lada Hitam|': 46,
+    'filling_celup|regular|Mentai|Keju|': 47,
+    'filling_celup|regular|Mentai|Balado|': 48,
+    'filling_celup|regular|Mentai|Sweet Corn|': 49,
+    'filling_celup|regular|Garlic|Keju|': 50,
+    'filling_celup|regular|Garlic|Balado|': 51,
+    'filling_celup|regular|Garlic|Sweet Corn|': 52,
+    'filling_celup|regular|Cheese|Keju|': 53,
+    'filling_celup|regular|Cheese|Balado|': 54,
+    'filling_celup|regular|Cheese|Sweet Corn|': 55,
+    'filling_celup|jumbo|Mentai|Keju|': 56,
+    'filling_celup|jumbo|Mentai|Balado|': 57,
+    'filling_celup|jumbo|Mentai|Sweet Corn|': 58,
+    'filling_celup|jumbo|Garlic|Keju|': 59,
+    'filling_celup|jumbo|Garlic|Balado|': 60,
+    'filling_celup|jumbo|Garlic|Sweet Corn|': 61,
+    'filling_celup|jumbo|Cheese|Keju|': 62,
+    'filling_celup|jumbo|Cheese|Balado|': 63,
+    'filling_celup|jumbo|Cheese|Sweet Corn|': 64,
+  };
+  return map[key] ?? 0; // fallback (should not happen)
+}
+
+/**
+ * Pushes a completed transaction to Google Sheets.
+ * Expects the Sheets endpoint to accept a JSON payload with:
+ *   { order: { ... }, items: [ ... ] }
+ */
 export async function pushToSheets(
   endpoint: string,
   tx: Transaction,
 ): Promise<boolean> {
-  if (!endpoint) return false;
+  if (!endpoint) {
+    console.warn("⚠️ No sheets endpoint configured");
+    return false;
+  }
+
   try {
-    const rows = tx.items.map((item) => ({
-      timestamp: tx.timestamp,
-      transactionId: tx.id,
-      productName: item.variantName,
-      size: item.size === "jumbo" ? "Jumbo" : "Regular",
-      filling: item.filling ?? "",
-      celup: item.celup ?? "",
-      tabur: item.tabur ?? "",
+    const order = {
+      id: tx.id,
+      order_number: tx.id,
+      created_at: tx.timestamp,
+      payment_method: tx.paymentMethod,
+      price_tier: tx.priceTier,
+      total: tx.grandTotal,
+      status: "completed",
+    };
+
+    const items = tx.items.map((item) => ({
+      order_id: tx.id,
+      product_id: getProductId(
+        item.variantId,
+        item.size,
+        item.filling,
+        item.celup,
+        item.tabur
+      ),
       quantity: item.quantity,
-      priceTier: item.priceTier === "kuantar" ? "Kuantar" : "Normal",
-      unitPrice: item.unitPrice,
-      subtotal: item.unitPrice * item.quantity,
-      paymentMethod: tx.paymentMethod,
-      grandTotal: tx.grandTotal,
+      unit_price: item.unitPrice,
+      line_total: item.unitPrice * item.quantity,
     }));
-    await fetch(endpoint, {
+
+    const payload = { order, items };
+
+    // Send as URL-encoded form data instead of JSON
+    const formData = new URLSearchParams();
+    formData.append("payload", JSON.stringify(payload));
+
+    const response = await fetch(endpoint, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ transaction: tx, rows }),
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded",
+      },
+      body: formData.toString(),
     });
-    return true;
-  } catch {
+
+    const responseText = await response.text();
+    console.log("📥 Response status:", response.status);
+    console.log("📥 Response body:", responseText);
+
+    return response.ok;
+  } catch (error) {
+    console.error("❌ Network error in pushToSheets:", error);
     return false;
   }
 }
+
+// ============================================================
 
 export function formatRp(n: number): string {
   return "Rp " + n.toLocaleString("id-ID");

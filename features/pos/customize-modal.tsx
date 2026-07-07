@@ -1,4 +1,4 @@
-import { formatRp } from "@/lib/pos-store";
+import { formatRp, getProductId } from "@/lib/pos-store";
 import {
   CELUPS,
   FILLINGS,
@@ -46,7 +46,6 @@ export default function CustomizeModal({
 
   const [size, setSize] = useState<Size>("regular");
   const [filling, setFilling] = useState<Filling | undefined>();
-  // Default to "celup" when sauce is allowed – forces immediate sub‑choice
   const [sauceMode, setSauceMode] = useState<"celup" | "tabur">("celup");
   const [celup, setCelup] = useState<Celup | undefined>();
   const [tabur, setTabur] = useState<Tabur | undefined>();
@@ -86,6 +85,7 @@ export default function CustomizeModal({
         return;
       }
     }
+
     onAdd({
       id: Math.random().toString(36).slice(2),
       variantId,
@@ -95,6 +95,13 @@ export default function CustomizeModal({
       celup: variant.allowsSauce && sauceMode === "celup" ? celup : undefined,
       tabur: variant.allowsSauce && sauceMode === "tabur" ? tabur : undefined,
       quantity: qty,
+      productId: getProductId(
+        variantId,
+        size,
+        variant.needsFilling ? filling : undefined,
+        variant.allowsSauce && sauceMode === "celup" ? celup : undefined,
+        variant.allowsSauce && sauceMode === "tabur" ? tabur : undefined
+      ),
     });
   }
 
@@ -171,7 +178,6 @@ export default function CustomizeModal({
                   PILIH SAUS (WAJIB){" "}
                   <Text style={{ color: C.destructive }}>*</Text>
                 </Text>
-                {/* Celup/Tabur toggle buttons */}
                 <View style={s.sauceModeRow}>
                   <TouchableOpacity
                     onPress={() => {
@@ -215,7 +221,6 @@ export default function CustomizeModal({
                   </TouchableOpacity>
                 </View>
 
-                {/* Sub‑choices for the active mode */}
                 <View style={s.sauceOptionBox}>
                   {sauceMode === "celup" && (
                     <View style={s.grid2}>
@@ -301,7 +306,6 @@ export default function CustomizeModal({
   );
 }
 
-// styles remain unchanged (only removed unused sauce-related styles if any)
 const s = StyleSheet.create({
   overlay: { flex: 1, justifyContent: "flex-end" },
   dismiss: { flex: 1, backgroundColor: "rgba(0,0,0,0.4)" },
