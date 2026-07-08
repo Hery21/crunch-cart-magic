@@ -1,3 +1,6 @@
+// Import web polyfills first, before anything else
+import '../web-polyfill';
+
 import {
   Poppins_400Regular,
   Poppins_500Medium,

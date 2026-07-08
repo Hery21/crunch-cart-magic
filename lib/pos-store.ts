@@ -1,4 +1,65 @@
-import AsyncStorage from "@react-native-async-storage/async-storage";
+import { Platform } from "react-native";
+
+// On web, use localStorage-backed storage instead of native AsyncStorage
+let AsyncStorage: typeof import("@react-native-async-storage/async-storage").default;
+
+if (Platform.OS === "web") {
+  // Web implementation using localStorage
+  AsyncStorage = {
+    getItem: async (key: string) => {
+      try {
+        return localStorage.getItem(key) ?? null;
+      } catch (e) {
+        console.warn(`[AsyncStorage] Failed to get ${key}:`, e);
+        return null;
+      }
+    },
+    setItem: async (key: string, value: string) => {
+      try {
+        localStorage.setItem(key, value);
+      } catch (e) {
+        console.warn(`[AsyncStorage] Failed to set ${key}:`, e);
+      }
+    },
+    removeItem: async (key: string) => {
+      try {
+        localStorage.removeItem(key);
+      } catch (e) {
+        console.warn(`[AsyncStorage] Failed to remove ${key}:`, e);
+      }
+    },
+    clear: async () => {
+      try {
+        localStorage.clear();
+      } catch (e) {
+        console.warn(`[AsyncStorage] Failed to clear:`, e);
+      }
+    },
+    getAllKeys: async () => {
+      try {
+        return Object.keys(localStorage);
+      } catch (e) {
+        return [];
+      }
+    },
+    multiGet: async (keys: string[]) => {
+      return keys.map((key) => [key, localStorage.getItem(key) ?? null]);
+    },
+    multiSet: async (keyValuePairs: Array<[string, string]>) => {
+      keyValuePairs.forEach(([key, value]) => {
+        localStorage.setItem(key, value);
+      });
+    },
+    multiRemove: async (keys: string[]) => {
+      keys.forEach((key) => localStorage.removeItem(key));
+    },
+  } as any;
+} else {
+  // Native implementation for Android/iOS
+  const NativeAsyncStorage = require("@react-native-async-storage/async-storage").default;
+  AsyncStorage = NativeAsyncStorage;
+}
+
 import {
   DEFAULT_PRICES,
   DEFAULT_SETTINGS,

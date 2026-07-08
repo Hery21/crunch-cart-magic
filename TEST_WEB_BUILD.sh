@@ -1,0 +1,78 @@
+#!/bin/bash
+# Web Build & Testing Guide for POS App
+
+echo "=========================================="
+echo "Expo POS App - Web Build Testing"
+echo "=========================================="
+echo ""
+
+# Step 1: Build for web
+echo "Step 1: Building web version..."
+echo "Command: npx expo export --platform web"
+echo ""
+echo "This creates a static build in ./dist directory"
+echo "Press Enter to continue or Ctrl+C to exit"
+read -p ""
+
+# Step 2: Serve locally
+echo ""
+echo "Step 2: Serving locally at http://localhost:8080"
+echo "Command: npx http-server dist -c-1 -o"
+echo ""
+echo "This will:"
+echo "  - Start a local HTTP server"
+echo "  - Open http://localhost:8080 in your browser"
+echo "  - Clear browser cache (-c-1) to ensure fresh load"
+echo ""
+echo "Press Enter to continue"
+read -p ""
+
+# Step 3: Open DevTools
+echo ""
+echo "Step 3: Verify in Browser DevTools"
+echo "=========================================="
+echo ""
+echo "✓ Open DevTools (F12 or Cmd+Option+I)"
+echo "✓ Go to Console tab"
+echo "✓ You should NOT see the 'message channel closed' error"
+echo ""
+echo "✓ Go to Application tab > Local Storage"
+echo "✓ Select http://localhost:8080"
+echo "✓ You should see keys like:"
+echo "    - ccr.settings"
+echo "    - ccr.cart"
+echo "    - ccr.transactions"
+echo ""
+
+# Step 4: Manual testing
+echo "Step 4: Manual Testing Checklist"
+echo "=========================================="
+echo ""
+echo "□ App loads without errors"
+echo "□ Console shows no 'message channel closed' error"
+echo "□ Local Storage has keys (checked above)"
+echo "□ Try adding items to cart"
+echo "□ Refresh the page (F5 or Cmd+R)"
+echo "□ Cart items persist (check Local Storage updated)"
+echo "□ Try changing settings"
+echo "□ Close browser and reopen — data still there"
+echo ""
+
+# Step 5: Deploy to GitHub Pages
+echo "Step 5: Deploy to GitHub Pages"
+echo "=========================================="
+echo ""
+echo "After verification, deploy:"
+echo ""
+echo "  1. Build: npx expo export --platform web"
+echo "  2. Commit: git add dist/"
+echo "  3. Push: git push origin master"
+echo "  4. Visit: https://hery21.github.io/crunch-cart-magic/"
+echo ""
+
+echo "=========================================="
+echo "Need Help?"
+echo "=========================================="
+echo ""
+echo "See: WEB_POLYFILL_README.md for detailed documentation"
+echo ""
