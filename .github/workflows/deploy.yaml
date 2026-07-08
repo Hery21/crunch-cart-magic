@@ -5,7 +5,7 @@ on:
     branches: [ master ]
 
 permissions:
-  contents: write   # Required to push to gh-pages branch
+  contents: write
 
 jobs:
   build:
@@ -23,8 +23,26 @@ jobs:
       - name: Build web export
         run: npx expo export --platform web
       
+      - name: Fix asset paths for GitHub Pages subdirectory
+        run: |
+          # Replace all asset references to include the subdirectory
+          find dist -name "*.html" -o -name "*.js" | xargs sed -i 's|"/_expo|"/crunch-cart-magic/_expo|g'
+          find dist -name "*.html" -o -name "*.js" | xargs sed -i "s|'/_expo|'/crunch-cart-magic/_expo|g"
+          
+          # Also fix href="/favicon.ico" -> href="/crunch-cart-magic/favicon.ico"
+          find dist -name "*.html" | xargs sed -i 's|href="/favicon|href="/crunch-cart-magic/favicon|g'
+          
+          echo "✓ Asset paths fixed for subdirectory deployment"
+          echo "Sample file check:"
+          grep -m 1 'crunch-cart-magic/_expo' dist/index.html || echo "WARNING: Path fix may not have worked"
+      
       - name: Verify dist folder
-        run: ls -la dist/ && find dist -name "*.js" -type f | head -10
+        run: |
+          echo "Files created:"
+          ls -la dist/ | head -15
+          echo ""
+          echo "Checking for _expo files:"
+          find dist/_expo -name "*.js" | head -5
       
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v4
