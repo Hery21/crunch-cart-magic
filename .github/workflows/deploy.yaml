@@ -34,6 +34,17 @@ jobs:
           
           echo "✓ Asset paths fixed for subdirectory deployment"
       
+      - name: Convert to true SPA (copy index.html to all routes)
+        run: |
+          cd dist
+          # Copy index.html to all route HTML files so they all load the SPA
+          for file in *.html; do
+            if [ "$file" != "index.html" ]; then
+              cp index.html "$file"
+            fi
+          done
+          echo "✓ Converted to SPA: All HTML files now point to index.html"
+      
       - name: Create 404.html for SPA routing
         run: |
           cat > dist/404.html << 'EOF'
@@ -47,10 +58,10 @@ jobs:
                 const search = window.location.search;
                 const hash = window.location.hash;
                 
-                if (!pathname.match(/\.(html|js|css|json|xml|txt|ico|png|jpg|jpeg|gif|svg|woff|woff2|ttf|eot)$/i)) {
+                // Only redirect if it's not a known file type
+                if (!pathname.match(/\.(js|css|json|xml|txt|ico|png|jpg|jpeg|gif|svg|woff|woff2|ttf|eot)$/i)) {
+                  // Store redirect info and go to index.html
                   sessionStorage.setItem('spa_redirect_pathname', pathname);
-                  sessionStorage.setItem('spa_redirect_search', search);
-                  sessionStorage.setItem('spa_redirect_hash', hash);
                   window.location.replace('/crunch-cart-magic/index.html' + search + hash);
                 }
               </script>
@@ -62,14 +73,18 @@ jobs:
       
       - name: Verify dist folder
         run: |
-          echo "Files created:"
-          ls -la dist/ | head -15
+          echo "Checking index.html paths:"
+          grep -m 1 'crunch-cart-magic/_expo' dist/index.html && echo "✓ index.html has correct paths" || echo "ERROR: Paths not fixed"
           echo ""
-          echo "Checking for correct paths in index.html:"
-          grep -m 1 'crunch-cart-magic/_expo' dist/index.html || echo "WARNING: Path fix may not have worked"
+          echo "Checking admin.html:"
+          if cmp -s dist/index.html dist/admin.html; then
+            echo "✓ admin.html copied from index.html"
+          else
+            echo "ERROR: admin.html not copied properly"
+          fi
           echo ""
           echo "Checking 404.html exists:"
-          test -f dist/404.html && echo "✓ 404.html exists" || echo "ERROR: 404.html missing"
+          [ -f dist/404.html ] && echo "✓ 404.html exists" || echo "ERROR: 404.html missing"
       
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v4
