@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <title>Redirecting...</title>
+    <script type="text/javascript">
+      const pathname = window.location.pathname;
+      const search = window.location.search;
+      const hash = window.location.hash;
+      
+      if (!pathname.match(/\.(html|js|css|json|xml|txt|ico|png|jpg|jpeg|gif|svg|woff|woff2|ttf|eot)$/i)) {
+        sessionStorage.setItem('spa_redirect_pathname', pathname);
+        sessionStorage.setItem('spa_redirect_search', search);
+        sessionStorage.setItem('spa_redirect_hash', hash);
+        window.location.replace('/crunch-cart-magic/index.html' + search + hash);
+      }
+    </script>
+  </head>
+  <body></body>
+</html>
