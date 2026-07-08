@@ -8,10 +8,10 @@
       const search = window.location.search;
       const hash = window.location.hash;
       
-      if (!pathname.match(/\.(html|js|css|json|xml|txt|ico|png|jpg|jpeg|gif|svg|woff|woff2|ttf|eot)$/i)) {
+      // Only redirect if it's not a known file type
+      if (!pathname.match(/\.(js|css|json|xml|txt|ico|png|jpg|jpeg|gif|svg|woff|woff2|ttf|eot)$/i)) {
+        // Store redirect info and go to index.html
         sessionStorage.setItem('spa_redirect_pathname', pathname);
-        sessionStorage.setItem('spa_redirect_search', search);
-        sessionStorage.setItem('spa_redirect_hash', hash);
         window.location.replace('/crunch-cart-magic/index.html' + search + hash);
       }
     </script>
