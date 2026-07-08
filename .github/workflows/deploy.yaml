@@ -33,16 +33,43 @@ jobs:
           find dist -name "*.html" | xargs sed -i 's|href="/favicon|href="/crunch-cart-magic/favicon|g'
           
           echo "✓ Asset paths fixed for subdirectory deployment"
-          echo "Sample file check:"
-          grep -m 1 'crunch-cart-magic/_expo' dist/index.html || echo "WARNING: Path fix may not have worked"
+      
+      - name: Create 404.html for SPA routing
+        run: |
+          cat > dist/404.html << 'EOF'
+          <!DOCTYPE html>
+          <html>
+            <head>
+              <meta charset="utf-8">
+              <title>Redirecting...</title>
+              <script type="text/javascript">
+                const pathname = window.location.pathname;
+                const search = window.location.search;
+                const hash = window.location.hash;
+                
+                if (!pathname.match(/\.(html|js|css|json|xml|txt|ico|png|jpg|jpeg|gif|svg|woff|woff2|ttf|eot)$/i)) {
+                  sessionStorage.setItem('spa_redirect_pathname', pathname);
+                  sessionStorage.setItem('spa_redirect_search', search);
+                  sessionStorage.setItem('spa_redirect_hash', hash);
+                  window.location.replace('/crunch-cart-magic/index.html' + search + hash);
+                }
+              </script>
+            </head>
+            <body></body>
+          </html>
+          EOF
+          echo "✓ Created 404.html for SPA routing"
       
       - name: Verify dist folder
         run: |
           echo "Files created:"
           ls -la dist/ | head -15
           echo ""
-          echo "Checking for _expo files:"
-          find dist/_expo -name "*.js" | head -5
+          echo "Checking for correct paths in index.html:"
+          grep -m 1 'crunch-cart-magic/_expo' dist/index.html || echo "WARNING: Path fix may not have worked"
+          echo ""
+          echo "Checking 404.html exists:"
+          test -f dist/404.html && echo "✓ 404.html exists" || echo "ERROR: 404.html missing"
       
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v4
