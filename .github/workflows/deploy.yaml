@@ -34,12 +34,58 @@ jobs:
           
           echo "✓ Asset paths fixed for subdirectory deployment"
       
+      - name: Extract script reference from generated index.html
+        run: |
+          # Get the script src from the generated index.html
+          SCRIPT_SRC=$(grep -oP 'src="\K[^"]*(?="/crunch-cart-magic/_expo[^"]*js")' dist/index.html | head -1)
+          
+          # Create a clean SPA index.html that will let React hydrate properly
+          cat > dist/index.html << 'EOFHTML'
+          <!DOCTYPE html>
+          <html lang="en">
+          <head>
+            <meta charset="utf-8" />
+            <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
+            <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+            <title>Crunch Cart Magic</title>
+            <style>
+              html, body, #root {
+                width: 100%;
+                height: 100%;
+                margin: 0;
+                padding: 0;
+              }
+              body {
+                overflow: hidden;
+              }
+              #root {
+                display: flex;
+              }
+            </style>
+          </head>
+          <body>
+            <div id="root"></div>
+            <script src="/crunch-cart-magic/_expo/static/js/web/entry-ENTRY_HASH_PLACEHOLDER.js" defer></script>
+          </body>
+          </html>
+          EOFHTML
+          
+          # Find the actual entry hash from the built files
+          ENTRY_FILE=$(ls -1 dist/_expo/static/js/web/entry-*.js | head -1 | xargs basename)
+          ENTRY_HASH=${ENTRY_FILE#entry-}
+          ENTRY_HASH=${ENTRY_HASH%.js}
+          
+          # Replace placeholder with actual hash
+          sed -i "s/entry-ENTRY_HASH_PLACEHOLDER.js/$ENTRY_FILE/g" dist/index.html
+          
+          echo "✓ Created clean SPA index.html with script: $ENTRY_FILE"
+      
       - name: Convert to true SPA (copy index.html to all routes)
         run: |
           cd dist
           # Copy index.html to all route HTML files so they all load the SPA
           for file in *.html; do
-            if [ "$file" != "index.html" ]; then
+            if [ "$file" != "index.html" ] && [ "$file" != "404.html" ]; then
               cp index.html "$file"
             fi
           done
@@ -76,12 +122,11 @@ jobs:
           echo "Checking index.html paths:"
           grep -m 1 'crunch-cart-magic/_expo' dist/index.html && echo "✓ index.html has correct paths" || echo "ERROR: Paths not fixed"
           echo ""
-          echo "Checking admin.html:"
-          if cmp -s dist/index.html dist/admin.html; then
-            echo "✓ admin.html copied from index.html"
-          else
-            echo "ERROR: admin.html not copied properly"
-          fi
+          echo "Checking index.html structure:"
+          grep '<div id="root"></div>' dist/index.html && echo "✓ index.html has clean root div" || echo "WARNING: root div might not be clean"
+          echo ""
+          echo "Checking for entry script:"
+          grep -o 'entry-[a-f0-9]*\.js' dist/index.html | head -1
           echo ""
           echo "Checking 404.html exists:"
           [ -f dist/404.html ] && echo "✓ 404.html exists" || echo "ERROR: 404.html missing"
