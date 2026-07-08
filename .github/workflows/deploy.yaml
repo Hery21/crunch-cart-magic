@@ -12,12 +12,22 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
+      
       - uses: actions/setup-node@v5
         with:
           node-version: 20
-      - run: npm ci
-      - run: npx expo export --platform web
-      - uses: peaceiris/actions-gh-pages@v4
+      
+      - name: Install dependencies
+        run: npm ci
+      
+      - name: Build web export
+        run: npx expo export --platform web
+      
+      - name: Verify dist folder
+        run: ls -la dist/ && find dist -name "*.js" -type f | head -10
+      
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v4
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: ./dist
