@@ -17,55 +17,23 @@ import { Platform } from "react-native";
 
 SplashScreen.preventAutoHideAsync();
 
-// Custom linking configuration for GitHub Pages subdirectory
-const linking = {
-  prefixes: [
-    'https://hery21.github.io/crunch-cart-magic',
-    'https://hery21.github.io/crunch-cart-magic/',
-    'crunch-cart-magic://',
-    '',
-  ],
-  config: {
-    screens: {
-      index: '',
-      admin: 'admin',
-      report: 'report',
-    },
-  },
-  // Custom parse function to handle subdirectory
-  async getInitialURL() {
-    if (typeof window === 'undefined') return null;
-
-    const pathname = window.location.pathname;
-    const match = pathname.match(/^\/crunch-cart-magic(\/[^?]*)?/);
+// Handle GitHub Pages subdirectory routing on web
+if (Platform.OS === 'web' && typeof window !== 'undefined') {
+  const pathname = window.location.pathname;
+  const match = pathname.match(/^\/crunch-cart-magic(\/.*)?$/);
+  
+  if (match) {
+    const pathSegment = match[1] || '/';
+    const currentHash = window.location.hash;
     
-    if (match) {
-      const path = match[1] || '/';
-      console.log('📍 getInitialURL: path =', path);
-      return path === '/' ? '/' : path;
+    // If not already using hash routing, convert to it
+    if (!currentHash || currentHash === '#') {
+      console.log('🔄 Converting to hash-based routing:', pathSegment);
+      const newUrl = `/crunch-cart-magic/#${pathSegment}`;
+      window.history.replaceState({}, document.title, newUrl);
     }
-    
-    return '/';
-  },
-  subscribe(listener: (url: string) => void) {
-    if (typeof window === 'undefined') return () => {};
-
-    const handleLocationChange = () => {
-      const pathname = window.location.pathname;
-      const match = pathname.match(/^\/crunch-cart-magic(\/[^?]*)?/);
-      
-      if (match) {
-        const path = match[1] || '/';
-        console.log('📍 subscribe: path =', path);
-        listener(path === '/' ? '/' : path);
-      }
-    };
-
-    // Listen to popstate events
-    window.addEventListener('popstate', handleLocationChange);
-    return () => window.removeEventListener('popstate', handleLocationChange);
-  },
-};
+  }
+}
 
 export default function RootLayout() {
   const [loaded] = useFonts({
@@ -85,10 +53,7 @@ export default function RootLayout() {
   return (
     <>
       <StatusBar style="light" />
-      <Stack
-        screenOptions={{ headerShown: false }}
-        linking={Platform.OS === 'web' ? linking : undefined}
-      />
+      <Stack screenOptions={{ headerShown: false }} />
     </>
   );
 }
