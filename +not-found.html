@@ -5,6 +5,23 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
   <meta http-equiv="X-UA-Compatible" content="IE=edge" />
   <title>Crunch Cart Magic</title>
+  <script type="text/javascript">
+    // Redirect to hash-based routing if not already using it
+    if (typeof window !== 'undefined') {
+      const pathname = window.location.pathname;
+      const hash = window.location.hash;
+      const match = pathname.match(/^\/crunch-cart-magic(\/.*)?$/);
+      
+      if (match && (!hash || hash === '#')) {
+        const pathSegment = match[1] || '/';
+        const newUrl = '/crunch-cart-magic/#' + pathSegment;
+        console.log('[URL Redirect] Converting:', pathname, '→', newUrl);
+        window.history.replaceState({}, document.title, newUrl);
+        // Force a reload to ensure React Router sees the new URL
+        window.location.href = newUrl;
+      }
+    }
+  </script>
   <style>
     html, body, #root {
       width: 100%;
