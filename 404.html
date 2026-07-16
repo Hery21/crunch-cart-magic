@@ -4,16 +4,7 @@
     <meta charset="utf-8">
     <title>Redirecting...</title>
     <script type="text/javascript">
-      const pathname = window.location.pathname;
-      const search = window.location.search;
-      const hash = window.location.hash;
-      
-      // Only redirect if it's not a known file type
-      if (!pathname.match(/\.(js|css|json|xml|txt|ico|png|jpg|jpeg|gif|svg|woff|woff2|ttf|eot)$/i)) {
-        // Store redirect info and go to index.html
-        sessionStorage.setItem('spa_redirect_pathname', pathname);
-        window.location.replace('/crunch-cart-magic/index.html' + search + hash);
-      }
+      window.location.replace('/crunch-cart-magic/');
     </script>
   </head>
   <body></body>
