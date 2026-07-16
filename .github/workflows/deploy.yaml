@@ -23,92 +23,6 @@ jobs:
       - name: Build web export
         run: npx expo export --platform web
       
-      - name: Fix asset paths for GitHub Pages subdirectory
-        run: |
-          # Replace all asset references to include the subdirectory
-          find dist -name "*.html" -o -name "*.js" | xargs sed -i 's|"/_expo|"/crunch-cart-magic/_expo|g'
-          find dist -name "*.html" -o -name "*.js" | xargs sed -i "s|'/_expo|'/crunch-cart-magic/_expo|g"
-          
-          # Also fix href="/favicon.ico" -> href="/crunch-cart-magic/favicon.ico"
-          find dist -name "*.html" | xargs sed -i 's|href="/favicon|href="/crunch-cart-magic/favicon|g'
-          
-          echo "✓ Asset paths fixed for subdirectory deployment"
-      
-      - name: Extract script reference from generated index.html
-        run: |
-          # Get the script src from the generated index.html
-          SCRIPT_SRC=$(grep -oP 'src="\K[^"]*(?="/crunch-cart-magic/_expo[^"]*js")' dist/index.html | head -1)
-          
-          # Create a clean SPA index.html that will let React hydrate properly
-          # Include redirect to hash-based routing at the top
-          cat > dist/index.html << 'EOFHTML'
-          <!DOCTYPE html>
-          <html lang="en">
-          <head>
-            <meta charset="utf-8" />
-            <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
-            <meta http-equiv="X-UA-Compatible" content="IE=edge" />
-            <title>Crunch Cart Magic</title>
-            <script type="text/javascript">
-              // Redirect to hash-based routing if not already using it
-              if (typeof window !== 'undefined') {
-                const pathname = window.location.pathname;
-                const hash = window.location.hash;
-                const match = pathname.match(/^\/crunch-cart-magic(\/.*)?$/);
-                
-                if (match && (!hash || hash === '#')) {
-                  const pathSegment = match[1] || '/';
-                  const newUrl = '/crunch-cart-magic/#' + pathSegment;
-                  console.log('[URL Redirect] Converting:', pathname, '→', newUrl);
-                  window.history.replaceState({}, document.title, newUrl);
-                  // Force a reload to ensure React Router sees the new URL
-                  window.location.href = newUrl;
-                }
-              }
-            </script>
-            <style>
-              html, body, #root {
-                width: 100%;
-                height: 100%;
-                margin: 0;
-                padding: 0;
-              }
-              body {
-                overflow: hidden;
-              }
-              #root {
-                display: flex;
-              }
-            </style>
-          </head>
-          <body>
-            <div id="root"></div>
-            <script src="/crunch-cart-magic/_expo/static/js/web/entry-ENTRY_HASH_PLACEHOLDER.js" defer></script>
-          </body>
-          </html>
-          EOFHTML
-          
-          # Find the actual entry hash from the built files
-          ENTRY_FILE=$(ls -1 dist/_expo/static/js/web/entry-*.js | head -1 | xargs basename)
-          ENTRY_HASH=${ENTRY_FILE#entry-}
-          ENTRY_HASH=${ENTRY_HASH%.js}
-          
-          # Replace placeholder with actual hash
-          sed -i "s/entry-ENTRY_HASH_PLACEHOLDER.js/$ENTRY_FILE/g" dist/index.html
-          
-          echo "✓ Created clean SPA index.html with script: $ENTRY_FILE"
-      
-      - name: Convert to true SPA (copy index.html to all routes)
-        run: |
-          cd dist
-          # Copy index.html to all route HTML files so they all load the SPA
-          for file in *.html; do
-            if [ "$file" != "index.html" ] && [ "$file" != "404.html" ]; then
-              cp index.html "$file"
-            fi
-          done
-          echo "✓ Converted to SPA: All HTML files now point to index.html"
-      
       - name: Create 404.html for SPA routing
         run: |
           cat > dist/404.html << 'EOF'
@@ -118,16 +32,7 @@ jobs:
               <meta charset="utf-8">
               <title>Redirecting...</title>
               <script type="text/javascript">
-                const pathname = window.location.pathname;
-                const search = window.location.search;
-                const hash = window.location.hash;
-                
-                // Only redirect if it's not a known file type
-                if (!pathname.match(/\.(js|css|json|xml|txt|ico|png|jpg|jpeg|gif|svg|woff|woff2|ttf|eot)$/i)) {
-                  // Store redirect info and go to index.html
-                  sessionStorage.setItem('spa_redirect_pathname', pathname);
-                  window.location.replace('/crunch-cart-magic/index.html' + search + hash);
-                }
+                window.location.replace('/crunch-cart-magic/');
               </script>
             </head>
             <body></body>
@@ -139,12 +44,6 @@ jobs:
         run: |
           echo "Checking index.html paths:"
           grep -m 1 'crunch-cart-magic/_expo' dist/index.html && echo "✓ index.html has correct paths" || echo "ERROR: Paths not fixed"
-          echo ""
-          echo "Checking index.html structure:"
-          grep '<div id="root"></div>' dist/index.html && echo "✓ index.html has clean root div" || echo "WARNING: root div might not be clean"
-          echo ""
-          echo "Checking for entry script:"
-          grep -o 'entry-[a-f0-9]*\.js' dist/index.html | head -1
           echo ""
           echo "Checking 404.html exists:"
           [ -f dist/404.html ] && echo "✓ 404.html exists" || echo "ERROR: 404.html missing"
