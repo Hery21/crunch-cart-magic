@@ -365,3 +365,19 @@ export async function pushToSheets(
 export function formatRp(n: number): string {
   return "Rp " + n.toLocaleString("id-ID");
 }
+
+const USER_KEY = "ccr.user";
+
+export async function saveUser(user: { username: string; display_name: string; role: string }): Promise<void> {
+  await safeSetItem(USER_KEY, JSON.stringify(user));
+}
+
+export async function loadUser(): Promise<{ username: string; display_name: string; role: string } | null> {
+  const raw = await safeGetItem(USER_KEY);
+  if (!raw) return null;
+  try { return JSON.parse(raw); } catch { return null; }
+}
+
+export async function clearUser(): Promise<void> {
+  await safeSetItem(USER_KEY, "");
+}
