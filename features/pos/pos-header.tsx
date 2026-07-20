@@ -1,9 +1,11 @@
 import type { PaymentMethod } from "@/lib/pos-types";
+import { clearUser, loadUser } from "@/lib/pos-store";
 import { C, R } from "@/lib/theme";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
-import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { useEffect, useState } from "react";
+import { Alert, Platform, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 
 const PAYMENT_METHODS = [
   { id: "Cash" as const, icon: "wallet-outline", label: "Cash" },
@@ -22,6 +24,44 @@ export default function PosHeader({
   paymentMethod,
   onChangePayment,
 }: Props) {
+  // Store the full user object instead of just the role
+  const [user, setUser] = useState<{ display_name: string; role: string } | null>(null);
+
+  useEffect(() => {
+    const getUser = async () => {
+      const loggedUser = await loadUser();
+      setUser(loggedUser);
+    };
+    getUser();
+  }, []);
+
+  const handleLogout = () => {
+    const logoutAction = async () => {
+      await clearUser();
+      router.replace("/login");
+    };
+
+    if (Platform.OS === "web") {
+      if (window.confirm("Are you sure you want to logout?")) {
+        logoutAction();
+      }
+    } else {
+      Alert.alert(
+        "Logout",
+        "Are you sure you want to logout?",
+        [
+          { text: "Cancel", style: "cancel" },
+          {
+            text: "Logout",
+            style: "destructive",
+            onPress: logoutAction,
+          },
+        ],
+        { cancelable: true }
+      );
+    }
+  };
+
   return (
     <LinearGradient
       colors={[C.warm, C.primary]}
@@ -33,7 +73,10 @@ export default function PosHeader({
           <Text style={s.headerTitle} numberOfLines={1}>
             🍗 CHICKEN CRUNCHY ROLL
           </Text>
-          <Text style={s.headerSub}>Kasir • {clock}</Text>
+          {/* 👇 Show display_name or fallback to "Kasir" */}
+          <Text style={s.headerSub}>
+            {user?.display_name || "Kasir"} • {clock}
+          </Text>
         </View>
         <TouchableOpacity
           style={s.headerAction}
@@ -42,11 +85,20 @@ export default function PosHeader({
           <Ionicons name="document-text-outline" size={16} color={C.warmFg} />
           <Text style={s.headerActionText}>Laporan</Text>
         </TouchableOpacity>
-        <TouchableOpacity
-          style={s.headerAction}
-          onPress={() => router.push("/admin")}
-        >
-          <Text style={s.headerActionText}>Admin</Text>
+
+        {/* 👇 Check role from the user object */}
+        {user?.role === "admin" && (
+          <TouchableOpacity
+            style={s.headerAction}
+            onPress={() => router.push("/admin")}
+          >
+            <Text style={s.headerActionText}>Admin</Text>
+          </TouchableOpacity>
+        )}
+
+        <TouchableOpacity style={s.headerAction} onPress={handleLogout}>
+          <Ionicons name="log-out-outline" size={16} color={C.warmFg} />
+          <Text style={s.headerActionText}>Logout</Text>
         </TouchableOpacity>
       </View>
       <View style={s.payBar}>
@@ -115,19 +167,6 @@ const s = StyleSheet.create({
     borderColor: "rgba(255,255,255,0.2)",
   },
   headerActionText: {
-    fontFamily: "Poppins_600SemiBold",
-    fontSize: 12,
-    color: C.warmFg,
-  },
-  adminBtn: {
-    backgroundColor: "rgba(255,255,255,0.15)",
-    borderRadius: R.full,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.2)",
-  },
-  adminBtnText: {
     fontFamily: "Poppins_600SemiBold",
     fontSize: 12,
     color: C.warmFg,
