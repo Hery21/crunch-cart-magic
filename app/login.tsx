@@ -20,44 +20,64 @@ export default function LoginScreen() {
   const [error, setError] = useState<string | null>(null);
 
   const init = async () => {
-    try {
-      // 1. Check if already logged in
-      const existingUser = await loadUser();
-      if (existingUser) {
-        router.replace("/(tabs)");
-        return;
-      }
-
-      // 2. Load settings and fetch users
-      const settings = await loadSettings();
-      const url = settings.sheetsEndpoint?.trim();
-      if (!url) {
-        setLoading(false);
-        setError("No Google Sheets endpoint configured.");
-        return;
-      }
-
-      const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 10000);
-      const response = await fetch(url, { signal: controller.signal });
-      clearTimeout(timeout);
-
-      if (!response.ok) throw new Error(`HTTP ${response.status}`);
-      const data = await response.json();
-      if (data.error) throw new Error(data.error);
-
-      // Normalize: convert password to string for comparison
-      const normalized = data.map((u: any) => ({
-        ...u,
-        password: String(u.password),
-      }));
-      setUsers(normalized);
-    } catch (err: any) {
-      setError(err.message || "Failed to load users.");
-    } finally {
-      setLoading(false);
+  try {
+    const existingUser = await loadUser();
+    if (existingUser) {
+      router.replace("/(tabs)");
+      return;
     }
-  };
+
+    const settings = await loadSettings();
+    let url = settings.sheetsEndpoint?.trim();
+    if (!url) {
+      setLoading(false);
+      setError("No Google Sheets endpoint configured.");
+      return;
+    }
+
+    // Ensure URL has a protocol
+    if (!/^https?:\/\//i.test(url)) {
+      url = 'https://' + url;
+    }
+
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 10000);
+    const response = await fetch(url, { signal: controller.signal });
+    clearTimeout(timeout);
+
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+    // Check that the response is actually JSON
+    const contentType = response.headers.get('content-type');
+    if (!contentType || !contentType.includes('application/json')) {
+      const text = await response.text();
+      console.error('Unexpected response:', text.substring(0, 300));
+      throw new Error('Endpoint returned non-JSON data. Check your sheets endpoint URL.');
+    }
+
+    const data = await response.json();
+    if (data.error) throw new Error(data.error);
+
+    // Validate data structure
+    if (!Array.isArray(data)) {
+      throw new Error('Expected an array of users, but got ' + typeof data);
+    }
+
+    const normalized = data.map((u: any) => ({
+      ...u,
+      password: String(u.password ?? ''),
+    }));
+    setUsers(normalized);
+  } catch (err: any) {
+    if (err.name === 'AbortError') {
+      setError('Request timed out. Check your connection and try again.');
+    } else {
+      setError(err.message || 'Failed to load users.');
+    }
+  } finally {
+    setLoading(false);
+  }
+};
 
   useEffect(() => { init(); }, []);
 
