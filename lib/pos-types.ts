@@ -104,7 +104,7 @@ export const DEFAULT_PRICES: PriceMap = {
 export const DEFAULT_SETTINGS: Settings = {
   prices: DEFAULT_PRICES,
   pin: "1234",
-  sheetsEndpoint: "",
+  sheetsEndpoint: "https://script.google.com/macros/s/AKfycbzHgKBZsTk3E6-0Edcvu3q8oUeGT1gnsD10ChYFYoXlXWWlcEpNCi8U_JdgO1ofJGSKKQ/exec",
   invoiceCounter: 0,
 };
 

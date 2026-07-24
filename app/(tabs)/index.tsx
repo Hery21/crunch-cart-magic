@@ -24,6 +24,7 @@ import { C } from "@/lib/theme";
 import { useState } from "react";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { loadUser } from "@/lib/pos-store";
 
 export default function PosScreen() {
   const clock = useClock();
@@ -45,6 +46,8 @@ export default function PosScreen() {
     setSaving(true);
 
     try {
+    const currentUser = await loadUser();
+    console.log("👤 Current user for order:", currentUser);
       const items: TransactionItem[] = pos.cartWithPrices.map((i) => ({
         id: i.id,
         variantId: i.variantId,
@@ -66,6 +69,7 @@ export default function PosScreen() {
         grandTotal: pos.grandTotal,
         paymentMethod: pos.paymentMethod,
         priceTier: pos.tier,
+      created_by: currentUser?.display_name || "Unknown",
       };
 
       // 1. Save locally

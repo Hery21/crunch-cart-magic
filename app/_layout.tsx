@@ -1,4 +1,4 @@
-// Import web polyfills first, before anything else
+// web-polyfill must be imported FIRST
 import "../web-polyfill";
 
 import {
@@ -9,26 +9,26 @@ import {
   Poppins_800ExtraBold,
   useFonts,
 } from "@expo-google-fonts/poppins";
-import { Stack, useRouter } from "expo-router";
+import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { StatusBar } from "expo-status-bar";
-import { useEffect, useRef } from "react";
-import { Platform } from "react-native";
+import { useEffect } from "react";
+import { ActivityIndicator, Platform, View } from "react-native";
 
+// Prevent splash screen from auto-hiding
 SplashScreen.preventAutoHideAsync();
 
-// Store the intended route during module load
+// ------------------------------------------------------------------
+// Web subdirectory detection (kept from your original logic)
+// ------------------------------------------------------------------
 let intendedRoute: string | null = null;
 
 if (Platform.OS === "web" && typeof window !== "undefined") {
   const pathname = window.location.pathname;
   const match = pathname.match(/^\/crunch-cart-magic(\/.*)?$/);
-
   if (match) {
     const pathSegment = match[1] || "/";
     const currentHash = window.location.hash;
-
-    // If not already using hash routing, store the intended route
     if (!currentHash || currentHash === "#") {
       console.log("📍 Detected subdirectory path:", pathSegment);
       intendedRoute = pathSegment;
@@ -37,8 +37,7 @@ if (Platform.OS === "web" && typeof window !== "undefined") {
 }
 
 export default function RootLayout() {
-  const router = useRouter();
-  const [loaded] = useFonts({
+  const [fontsLoaded] = useFonts({
     Poppins_400Regular,
     Poppins_500Medium,
     Poppins_600SemiBold,
@@ -46,35 +45,34 @@ export default function RootLayout() {
     Poppins_800ExtraBold,
   });
 
-  const navigationTriggered = useRef(false);
-
   useEffect(() => {
-    if (loaded) SplashScreen.hideAsync();
-  }, [loaded]);
+    if (fontsLoaded) {
+      SplashScreen.hideAsync();
+    }
+  }, [fontsLoaded]);
 
+  // Handle subdirectory redirect on web (only once, after fonts load)
   useEffect(() => {
-    // After fonts are loaded and app is ready, handle the route
     if (
-      loaded &&
+      fontsLoaded &&
       intendedRoute &&
-      !navigationTriggered.current &&
-      Platform.OS === "web"
+      Platform.OS === "web" &&
+      intendedRoute !== "/" &&
+      intendedRoute !== ""
     ) {
-      navigationTriggered.current = true;
-      console.log("🔀 Navigating to:", intendedRoute);
-
-      // Update URL to hash-based routing
+      // Update URL to use hash-based routing
       const newUrl = `/crunch-cart-magic/#${intendedRoute}`;
       window.history.replaceState({}, document.title, newUrl);
-
-      // Navigate using the router if the route is not root
-      if (intendedRoute !== "/" && intendedRoute !== "") {
-        router.push(intendedRoute);
-      }
     }
-  }, [loaded, router]);
+  }, [fontsLoaded]);
 
-  if (!loaded) return null;
+  if (!fontsLoaded) {
+    return (
+      <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
+        <ActivityIndicator size="large" />
+      </View>
+    );
+  }
 
   return (
     <>

@@ -226,8 +226,23 @@ export function getProductId(
   celup?: string,
   tabur?: string,
 ): number {
-  // Build a unique key from the combination
-  const key = `${variantId}|${size}|${filling || ""}|${celup || ""}|${tabur || ""}`;
+  // If variantId is "tabur_celup", determine if tabur or celup is selected
+  let actualVariant = variantId;
+  if (variantId === "tabur_celup") {
+    if (tabur) actualVariant = "tabur";
+    else if (celup) actualVariant = "celup";
+    // If neither, default to tabur? But UI should enforce one.
+  } else if (variantId === "filling_tabur_celup") {
+    // If both filling and sauce are present, determine sauce type
+    if (tabur) actualVariant = "filling_tabur";
+    else if (celup) actualVariant = "filling_celup";
+    // else default to filling? Not possible because requires sauce.
+  }
+
+  // Build key based on actual variant
+  const key = `${actualVariant}|${size}|${filling || ""}|${celup || ""}|${tabur || ""}`;
+
+  // Full mapping for all 64 combinations
   const map: Record<string, number> = {
     "original|regular|||": 1,
     "original|jumbo|||": 2,
@@ -294,7 +309,7 @@ export function getProductId(
     "filling_celup|jumbo|Cheese|Balado|": 63,
     "filling_celup|jumbo|Cheese|Sweet Corn|": 64,
   };
-  return map[key] ?? 0; // fallback (should not happen)
+  return map[key] ?? 0;
 }
 
 /**
@@ -304,41 +319,33 @@ export function getProductId(
  */
 export async function pushToSheets(
   endpoint: string,
-  tx: Transaction,
-): Promise<boolean> {
-  if (!endpoint) {
-    console.warn("⚠️ No sheets endpoint configured");
-    return false;
-  }
-
+  tx: Omit<Transaction, "id" | "order_number"> & { created_by: string },
+): Promise<string | null> {
+  if (!endpoint) return null;
   try {
-    const order = {
-      id: tx.id,
-      order_number: tx.id,
-      created_at: tx.timestamp,
-      payment_method: tx.paymentMethod,
-      price_tier: tx.priceTier,
-      total: tx.grandTotal,
-      status: "completed",
+    const payload = {
+      order: {
+        payment_method: tx.paymentMethod,
+        price_tier: tx.priceTier,
+        total: tx.grandTotal,
+        created_by: tx.created_by,
+        created_at: tx.timestamp,
+      },
+      items: tx.items.map((item) => ({
+        product_id: getProductId(
+          item.variantId,
+          item.size,
+          item.filling,
+          item.celup,
+          item.tabur,
+        ),
+        quantity: item.quantity,
+        unit_price: item.unitPrice,
+        line_total: item.unitPrice * item.quantity,
+      })),
     };
 
-    const items = tx.items.map((item) => ({
-      order_id: tx.id,
-      product_id: getProductId(
-        item.variantId,
-        item.size,
-        item.filling,
-        item.celup,
-        item.tabur,
-      ),
-      quantity: item.quantity,
-      unit_price: item.unitPrice,
-      line_total: item.unitPrice * item.quantity,
-    }));
-
-    const payload = { order, items };
-
-    // Send as URL-encoded form data instead of JSON
+    // Send as URL-encoded form data (to avoid CORS preflight)
     const formData = new URLSearchParams();
     formData.append("payload", JSON.stringify(payload));
 
@@ -350,14 +357,16 @@ export async function pushToSheets(
       body: formData.toString(),
     });
 
-    const responseText = await response.text();
-    console.log("📥 Response status:", response.status);
-    console.log("📥 Response body:", responseText);
+    if (!response.ok) {
+      console.warn("Sheets response not OK:", response.status);
+      return null;
+    }
 
-    return response.ok;
+    const result = await response.json();
+    return result.orderNumber || null; // server returns the new invoice ID
   } catch (error) {
-    console.error("❌ Network error in pushToSheets:", error);
-    return false;
+    console.error("Push to sheets failed:", error);
+    return null;
   }
 }
 
@@ -365,4 +374,40 @@ export async function pushToSheets(
 
 export function formatRp(n: number): string {
   return "Rp " + n.toLocaleString("id-ID");
+}
+
+const USER_KEY = "ccr.user";
+
+export async function saveUser(user: {
+  username: string;
+  display_name: string;
+  role: string;
+}): Promise<void> {
+  await safeSetItem(USER_KEY, JSON.stringify(user));
+}
+
+export async function loadUser(): Promise<{
+  username: string;
+  display_name: string;
+  role: string;
+} | null> {
+  try {
+    const raw = await safeGetItem(USER_KEY);
+    if (!raw) return null;
+    return JSON.parse(raw);
+  } catch {
+    return null;
+  }
+}
+
+export async function clearUser(): Promise<void> {
+  try {
+    if (useMemoryFallback) {
+      memoryStore.delete(USER_KEY);
+      return;
+    }
+    await AsyncStorage.removeItem(USER_KEY);
+  } catch (error) {
+    console.warn("Failed to clear user:", error);
+  }
 }
