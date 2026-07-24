@@ -14,30 +14,26 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 
 /**
- * Fetches JSON from a Google Apps Script /exec endpoint in a way that works
- * on iOS Safari.
+ * Loads the users list from the Google Apps Script /exec endpoint.
  *
- * WHY THIS IS NEEDED:
- * - Apps Script /exec always 302-redirects to script.googleusercontent.com.
- * - Safari blocks third-party cookies, so on a cross-site fetch it follows
- *   that redirect WITHOUT Google's consent cookie. Google then returns a
- *   security/consent HTML page (window['ppConfig'] / csp.withgoogle.com)
- *   instead of your JSON, and JSON.parse() throws "non-JSON data".
- * - Chrome works because it sends the third-party cookie.
+ * ROOT CAUSE OF THE SAFARI BUG:
+ *   The app worked in Safari *Private* mode but failed in normal Safari.
+ *   That proves the fetch itself is fine — normal Safari was serving a
+ *   STALE CACHED copy of Google's redirect/interstitial HTML page
+ *   (window['ppConfig'] / csp.withgoogle.com) instead of the live JSON.
  *
- * STRATEGY:
- *   1. Try the endpoint directly (fast path; works on Chrome/Android/etc.).
- *   2. If we detect an HTML/interstitial response (Safari case), transparently
- *      retry through a CORS proxy, which follows Google's redirect server-side
- *      and returns clean JSON with proper CORS headers.
+ * THE FIX:
+ *   Never let Safari cache this request:
+ *     - `cache: "no-store"`
+ *     - Cache-Control / Pragma request headers
+ *     - a unique `?t=<timestamp>` cache-buster on every call
+ *   Plus a generous timeout (iOS Safari is slow to wake a request) and a
+ *   clear error if a non-JSON page ever slips through.
  */
 
-// A CORS proxy that follows redirects server-side and echoes proper CORS
-// headers. Swap this for your own tiny Cloudflare Worker / proxy in production
-// for reliability & privacy.
-const CORS_PROXY = "https://corsproxy.io/?url=";
+const REQUEST_TIMEOUT_MS = 30000;
 
-// Detects Google's interstitial / any HTML page (i.e. NOT your JSON array).
+// Detects Google's interstitial / any HTML page (i.e. NOT your JSON payload).
 function looksLikeHtml(text: string): boolean {
   const t = text.trim().slice(0, 300).toLowerCase();
   return (
@@ -45,48 +41,43 @@ function looksLikeHtml(text: string): boolean {
     t.startsWith("<html") ||
     t.includes("ppconfig") ||
     t.includes("csp.withgoogle.com") ||
-    t.includes("accounts.google.com") ||
-    t.includes("sign in")
+    t.includes("accounts.google.com")
   );
 }
 
-async function fetchText(url: string, timeoutMs: number): Promise<string> {
+async function fetchUsersJson(endpoint: string): Promise<any> {
+  // Unique per-call cache-buster so Safari can never reuse a cached response.
+  const bust = (endpoint.includes("?") ? "&" : "?") + "t=" + Date.now();
+  const url = endpoint + bust;
+
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), timeoutMs);
+  const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+
+  let raw: string;
   try {
     const response = await fetch(url, {
       signal: controller.signal,
+      method: "GET",
       redirect: "follow",
       cache: "no-store",
-      headers: { Accept: "application/json" },
+      headers: {
+        Accept: "application/json",
+        "Cache-Control": "no-cache, no-store, must-revalidate",
+        Pragma: "no-cache",
+      },
     });
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
-    return await response.text();
+    raw = await response.text();
   } finally {
     clearTimeout(timeout);
   }
-}
 
-async function fetchUsersJson(endpoint: string): Promise<any> {
-  // Cache-buster so Safari never serves a stale bad response.
-  const bust = (endpoint.includes("?") ? "&" : "?") + "t=" + Date.now();
-  const directUrl = endpoint + bust;
-
-  // 1) Fast path: direct request.
-  let raw = await fetchText(directUrl, 30000);
-
-  // 2) Safari fallback: got HTML instead of JSON -> retry via proxy.
-  if (looksLikeHtml(raw)) {
-    const proxied = CORS_PROXY + encodeURIComponent(directUrl);
-    raw = await fetchText(proxied, 30000);
-  }
-
-  // Still HTML? Then it's a real deployment/permission problem, not Safari.
+  // If a Google HTML page still comes back, surface a clear message.
   if (looksLikeHtml(raw)) {
     throw new Error(
-      "The endpoint returned a Google web page instead of JSON. " +
-        "Check that the Apps Script is deployed with access set to " +
-        '"Anyone" and redeploy a new version.',
+      "Received a Google web page instead of JSON. In Safari, clear " +
+        "Website Data for this site (Settings ▸ Safari ▸ Advanced ▸ " +
+        "Website Data) and reload.",
     );
   }
 
@@ -130,7 +121,6 @@ export default function LoginScreen() {
 
       if (data && data.error) throw new Error(data.error);
 
-      // Normalize user passwords
       const normalized = (Array.isArray(data) ? data : []).map((u: any) => ({
         ...u,
         password: String(u.password ?? ""),
