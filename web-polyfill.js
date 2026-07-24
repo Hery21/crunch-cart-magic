@@ -1,13 +1,13 @@
 /**
  * Web Polyfill for Expo React Native App
- * 
+ *
  * This polyfill provides web-compatible alternatives for native modules
  * that don't work in static web builds (e.g., AsyncStorage).
- * 
+ *
  * It automatically detects the web environment and patches modules accordingly.
  */
 
-const isWeb = typeof window !== 'undefined' && typeof document !== 'undefined';
+const isWeb = typeof window !== "undefined" && typeof document !== "undefined";
 
 /**
  * LocalStorage-backed implementation of AsyncStorage for web
@@ -45,7 +45,7 @@ const WebAsyncStorage = {
     try {
       return Object.keys(localStorage);
     } catch (e) {
-      console.warn('[WebAsyncStorage] Failed to get all keys:', e);
+      console.warn("[WebAsyncStorage] Failed to get all keys:", e);
       return [];
     }
   },
@@ -54,7 +54,7 @@ const WebAsyncStorage = {
     try {
       return keys.map((key) => [key, localStorage.getItem(key) ?? null]);
     } catch (e) {
-      console.warn('[WebAsyncStorage] Failed to multiGet:', e);
+      console.warn("[WebAsyncStorage] Failed to multiGet:", e);
       return keys.map((key) => [key, null]);
     }
   },
@@ -65,7 +65,7 @@ const WebAsyncStorage = {
         localStorage.setItem(key, value);
       });
     } catch (e) {
-      console.warn('[WebAsyncStorage] Failed to multiSet:', e);
+      console.warn("[WebAsyncStorage] Failed to multiSet:", e);
       throw e;
     }
   },
@@ -76,7 +76,7 @@ const WebAsyncStorage = {
         localStorage.removeItem(key);
       });
     } catch (e) {
-      console.warn('[WebAsyncStorage] Failed to multiRemove:', e);
+      console.warn("[WebAsyncStorage] Failed to multiRemove:", e);
       throw e;
     }
   },
@@ -85,7 +85,7 @@ const WebAsyncStorage = {
     try {
       localStorage.clear();
     } catch (e) {
-      console.warn('[WebAsyncStorage] Failed to clear:', e);
+      console.warn("[WebAsyncStorage] Failed to clear:", e);
       throw e;
     }
   },
@@ -95,57 +95,59 @@ const WebAsyncStorage = {
  * Initialize web polyfills if running on web
  */
 if (isWeb) {
-  console.log('[WebPolyfill] Initializing web polyfills...');
+  console.log("[WebPolyfill] Initializing web polyfills...");
 
   // Polyfill @react-native-async-storage/async-storage
   try {
     // Register the AsyncStorage module replacement
-    if (typeof global !== 'undefined') {
+    if (typeof global !== "undefined") {
       global.__REACT_NATIVE_ASYNC_STORAGE__ = WebAsyncStorage;
     }
-    
+
     // Also try to patch the module cache if available
-    if (typeof require !== 'undefined' && require.cache) {
+    if (typeof require !== "undefined" && require.cache) {
       // Patch the cached AsyncStorage module
       const asyncStorageModule = {
         default: WebAsyncStorage,
         ...WebAsyncStorage,
       };
-      
+
       // This handles both named and default imports
-      if (typeof require.cache !== 'undefined') {
+      if (typeof require.cache !== "undefined") {
         const keys = Object.keys(require.cache);
         for (const key of keys) {
-          if (key.includes('async-storage')) {
+          if (key.includes("async-storage")) {
             require.cache[key].exports = asyncStorageModule;
             break;
           }
         }
       }
     }
-    
-    console.log('[WebPolyfill] AsyncStorage polyfill registered');
+
+    console.log("[WebPolyfill] AsyncStorage polyfill registered");
   } catch (e) {
-    console.warn('[WebPolyfill] Failed to register AsyncStorage polyfill:', e);
+    console.warn("[WebPolyfill] Failed to register AsyncStorage polyfill:", e);
   }
 
   // Suppress native module bridge warnings
   const originalWarn = console.warn;
-  console.warn = function(...args) {
-    const message = args[0]?.toString() ?? '';
-    
+  console.warn = function (...args) {
+    const message = args[0]?.toString() ?? "";
+
     // Filter out the specific bridge-related error
-    if (message.includes('message channel closed') || 
-        message.includes('Native module') ||
-        message.includes('Tried to get module')) {
-      console.log('[WebPolyfill] Suppressed native module warning:', args[0]);
+    if (
+      message.includes("message channel closed") ||
+      message.includes("Native module") ||
+      message.includes("Tried to get module")
+    ) {
+      console.log("[WebPolyfill] Suppressed native module warning:", args[0]);
       return;
     }
-    
+
     originalWarn.apply(console, args);
   };
 
-  console.log('[WebPolyfill] Web environment detected and polyfilled');
+  console.log("[WebPolyfill] Web environment detected and polyfilled");
 }
 
 export default WebAsyncStorage;

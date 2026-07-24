@@ -2,7 +2,7 @@ name: Deploy to GitHub Pages
 
 on:
   push:
-    branches: [ master ]
+    branches: [master]
 
 permissions:
   contents: write
@@ -12,17 +12,17 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
-      
+
       - uses: actions/setup-node@v5
         with:
           node-version: 20
-      
+
       - name: Install dependencies
         run: npm ci
-      
+
       - name: Build web export
         run: npx expo export --platform web
-      
+
       - name: Create 404.html for SPA routing
         run: |
           cat > dist/404.html << 'EOF'
@@ -39,7 +39,7 @@ jobs:
           </html>
           EOF
           echo "✓ Created 404.html for SPA routing"
-      
+
       - name: Verify dist folder
         run: |
           echo "Checking index.html paths:"
@@ -47,7 +47,7 @@ jobs:
           echo ""
           echo "Checking 404.html exists:"
           [ -f dist/404.html ] && echo "✓ 404.html exists" || echo "ERROR: 404.html missing"
-      
+
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v4
         with:

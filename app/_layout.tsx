@@ -1,5 +1,5 @@
 // Import web polyfills first, before anything else
-import '../web-polyfill';
+import "../web-polyfill";
 
 import {
   Poppins_400Regular,
@@ -20,17 +20,17 @@ SplashScreen.preventAutoHideAsync();
 // Store the intended route during module load
 let intendedRoute: string | null = null;
 
-if (Platform.OS === 'web' && typeof window !== 'undefined') {
+if (Platform.OS === "web" && typeof window !== "undefined") {
   const pathname = window.location.pathname;
   const match = pathname.match(/^\/crunch-cart-magic(\/.*)?$/);
-  
+
   if (match) {
-    const pathSegment = match[1] || '/';
+    const pathSegment = match[1] || "/";
     const currentHash = window.location.hash;
-    
+
     // If not already using hash routing, store the intended route
-    if (!currentHash || currentHash === '#') {
-      console.log('📍 Detected subdirectory path:', pathSegment);
+    if (!currentHash || currentHash === "#") {
+      console.log("📍 Detected subdirectory path:", pathSegment);
       intendedRoute = pathSegment;
     }
   }
@@ -45,7 +45,7 @@ export default function RootLayout() {
     Poppins_700Bold,
     Poppins_800ExtraBold,
   });
-  
+
   const navigationTriggered = useRef(false);
 
   useEffect(() => {
@@ -54,16 +54,21 @@ export default function RootLayout() {
 
   useEffect(() => {
     // After fonts are loaded and app is ready, handle the route
-    if (loaded && intendedRoute && !navigationTriggered.current && Platform.OS === 'web') {
+    if (
+      loaded &&
+      intendedRoute &&
+      !navigationTriggered.current &&
+      Platform.OS === "web"
+    ) {
       navigationTriggered.current = true;
-      console.log('🔀 Navigating to:', intendedRoute);
-      
+      console.log("🔀 Navigating to:", intendedRoute);
+
       // Update URL to hash-based routing
       const newUrl = `/crunch-cart-magic/#${intendedRoute}`;
       window.history.replaceState({}, document.title, newUrl);
-      
+
       // Navigate using the router if the route is not root
-      if (intendedRoute !== '/' && intendedRoute !== '') {
+      if (intendedRoute !== "/" && intendedRoute !== "") {
         router.push(intendedRoute);
       }
     }

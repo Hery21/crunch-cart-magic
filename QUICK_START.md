@@ -5,16 +5,19 @@
 Your app now runs on web without the "message channel closed" error. Three simple changes:
 
 ### 1. Created `web-polyfill.js` (new file)
+
 - Detects web environment
 - Replaces AsyncStorage with localStorage implementation
 - Suppresses native module warnings
 
 ### 2. Updated `lib/pos-store.ts` (3 sections added)
+
 - Platform detection at top
 - Conditional AsyncStorage import
 - Uses localStorage on web, native AsyncStorage on Android/iOS
 
 ### 3. Updated `app/_layout.tsx` (1 line added)
+
 - Added: `import '../web-polyfill';` at the very top
 - Ensures polyfill runs first
 
@@ -23,6 +26,7 @@ Your app now runs on web without the "message channel closed" error. Three simpl
 ## 🧪 How to Test
 
 ### Option A: Quick Local Test (2 minutes)
+
 ```powershell
 # Terminal 1: Build and serve
 npx expo export --platform web
@@ -36,9 +40,11 @@ npx http-server dist -c-1 -o
 ```
 
 ### Option B: Windows Script
+
 ```powershell
 .\TEST_WEB_BUILD.bat
 ```
+
 Runs the same steps with instructions.
 
 ---
@@ -58,16 +64,16 @@ npx http-server dist -c-1
 
 ## 📊 What Works on Web
 
-| Feature | Status |
-|---------|--------|
-| Load/Save Settings | ✅ Works |
-| Cart Persistence | ✅ Works |
-| Transaction History | ✅ Works |
-| Invoice ID Counter | ✅ Works |
-| Payment Method | ✅ Works |
-| Push to Sheets | ✅ Works* |
+| Feature             | Status     |
+| ------------------- | ---------- |
+| Load/Save Settings  | ✅ Works   |
+| Cart Persistence    | ✅ Works   |
+| Transaction History | ✅ Works   |
+| Invoice ID Counter  | ✅ Works   |
+| Payment Method      | ✅ Works   |
+| Push to Sheets      | ✅ Works\* |
 
-*If your Sheets endpoint allows CORS from GitHub Pages
+\*If your Sheets endpoint allows CORS from GitHub Pages
 
 ---
 
@@ -95,6 +101,7 @@ git push origin master
 ### Why This Works
 
 **Before Polyfill:**
+
 ```
 User opens web app
   ↓
@@ -112,6 +119,7 @@ App crash
 ```
 
 **After Polyfill:**
+
 ```
 User opens web app
   ↓
@@ -144,13 +152,13 @@ if (Platform.OS === "web") {
 
 ### Storage Comparison
 
-| Aspect | AsyncStorage | localStorage |
-|--------|--------------|--------------|
-| Platform | Native only | Web + all browsers |
-| API | Async | Sync → wrapped async |
-| Capacity | ~10MB | ~5-10MB |
-| Survives reload | ✅ | ✅ |
-| Accessed via | Bridge | `window.localStorage` |
+| Aspect          | AsyncStorage | localStorage          |
+| --------------- | ------------ | --------------------- |
+| Platform        | Native only  | Web + all browsers    |
+| API             | Async        | Sync → wrapped async  |
+| Capacity        | ~10MB        | ~5-10MB               |
+| Survives reload | ✅           | ✅                    |
+| Accessed via    | Bridge       | `window.localStorage` |
 
 ---
 
@@ -192,15 +200,18 @@ A: localStorage is 100% offline. Settings, cart, transactions work completely of
 ## 🚨 If Something Goes Wrong
 
 ### Error: "localStorage is not defined"
+
 - Polyfill didn't run early enough
 - Check: Is `import '../web-polyfill';` the **first** line in `_layout.tsx`?
 
 ### Error: "message channel closed" still appears
+
 - Clear browser cache (Ctrl+Shift+Delete)
 - Rebuild: `npx expo export --platform web`
 - Serve fresh: `npx http-server dist -c-1`
 
 ### Android build fails
+
 - Make sure you only modified the files listed above
 - Check `pos-store.ts`: Is the `else` branch using `require()`?
 - Run: `npx eas build --platform android` to test
@@ -210,6 +221,7 @@ A: localStorage is 100% offline. Settings, cart, transactions work completely of
 ## 📚 More Info
 
 See `WEB_POLYFILL_README.md` for:
+
 - Detailed technical explanation
 - Troubleshooting guide
 - Performance notes
@@ -227,6 +239,7 @@ See `WEB_POLYFILL_README.md` for:
 ✅ Data persists via localStorage
 
 **Ready to test? Run:**
+
 ```powershell
 npx expo export --platform web
 npx http-server dist -c-1 -o
