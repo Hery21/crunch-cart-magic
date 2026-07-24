@@ -56,9 +56,7 @@ export default function LoginScreen() {
       try {
         data = JSON.parse(raw);
       } catch {
-        throw new Error(
-          `Endpoint returned non‑JSON. First 200 chars: ${raw.substring(0, 200)}`,
-        );
+        throw new Error(raw.substring(0, 3000));
       }
 
       if (data.error) throw new Error(data.error);
