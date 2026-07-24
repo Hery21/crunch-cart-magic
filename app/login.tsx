@@ -13,6 +13,97 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+/**
+ * Fetches JSON from a Google Apps Script /exec endpoint in a way that works
+ * on iOS Safari.
+ *
+ * WHY THIS IS NEEDED:
+ * - Apps Script /exec always 302-redirects to script.googleusercontent.com.
+ * - Safari blocks third-party cookies, so on a cross-site fetch it follows
+ *   that redirect WITHOUT Google's consent cookie. Google then returns a
+ *   security/consent HTML page (window['ppConfig'] / csp.withgoogle.com)
+ *   instead of your JSON, and JSON.parse() throws "non-JSON data".
+ * - Chrome works because it sends the third-party cookie.
+ *
+ * STRATEGY:
+ *   1. Try the endpoint directly (fast path; works on Chrome/Android/etc.).
+ *   2. If we detect an HTML/interstitial response (Safari case), transparently
+ *      retry through a CORS proxy, which follows Google's redirect server-side
+ *      and returns clean JSON with proper CORS headers.
+ */
+
+// A CORS proxy that follows redirects server-side and echoes proper CORS
+// headers. Swap this for your own tiny Cloudflare Worker / proxy in production
+// for reliability & privacy.
+const CORS_PROXY = "https://corsproxy.io/?url=";
+
+// Detects Google's interstitial / any HTML page (i.e. NOT your JSON array).
+function looksLikeHtml(text: string): boolean {
+  const t = text.trim().slice(0, 300).toLowerCase();
+  return (
+    t.startsWith("<!doctype") ||
+    t.startsWith("<html") ||
+    t.includes("ppconfig") ||
+    t.includes("csp.withgoogle.com") ||
+    t.includes("accounts.google.com") ||
+    t.includes("sign in")
+  );
+}
+
+async function fetchText(url: string, timeoutMs: number): Promise<string> {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const response = await fetch(url, {
+      signal: controller.signal,
+      redirect: "follow",
+      cache: "no-store",
+      headers: { Accept: "application/json" },
+    });
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    return await response.text();
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+async function fetchUsersJson(endpoint: string): Promise<any> {
+  // Cache-buster so Safari never serves a stale bad response.
+  const bust = (endpoint.includes("?") ? "&" : "?") + "t=" + Date.now();
+  const directUrl = endpoint + bust;
+
+  // 1) Fast path: direct request.
+  let raw = await fetchText(directUrl, 30000);
+
+  // 2) Safari fallback: got HTML instead of JSON -> retry via proxy.
+  if (looksLikeHtml(raw)) {
+    const proxied = CORS_PROXY + encodeURIComponent(directUrl);
+    raw = await fetchText(proxied, 30000);
+  }
+
+  // Still HTML? Then it's a real deployment/permission problem, not Safari.
+  if (looksLikeHtml(raw)) {
+    throw new Error(
+      "The endpoint returned a Google web page instead of JSON. " +
+        "Check that the Apps Script is deployed with access set to " +
+        '"Anyone" and redeploy a new version.',
+    );
+  }
+
+  // Strip UTF-8 BOM / stray whitespace, then parse.
+  const cleaned = raw.trim().replace(/^\uFEFF/, "");
+  try {
+    return JSON.parse(cleaned);
+  } catch {
+    throw new Error(
+      `Endpoint returned non-JSON data. First 200 chars: ${cleaned.substring(
+        0,
+        200,
+      )}`,
+    );
+  }
+}
+
 export default function LoginScreen() {
   const [pin, setPin] = useState("");
   const [loading, setLoading] = useState(true);
@@ -35,45 +126,9 @@ export default function LoginScreen() {
         return;
       }
 
-      const controller = new AbortController();
+      const data = await fetchUsersJson(url);
 
-      const raw = await (async () => {
-        const response = await fetch(url, {
-          signal: controller.signal,
-          headers: {
-            Accept: "application/json, text/plain, */*",
-            "Accept-Language": "en-US,en;q=0.9",
-            "Accept-Encoding": "gzip, deflate, br",
-            "User-Agent":
-              "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1",
-            "Cache-Control": "no-cache",
-            Pragma: "no-cache",
-          },
-        });
-
-        Alert.alert(
-          "Debug",
-          JSON.stringify({
-            url: response.url,
-            status: response.status,
-            contentType: response.headers.get("content-type"),
-          }),
-        );
-
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
-
-        const text = await response.text();
-        return text;
-      })();
-
-      let data;
-      try {
-        data = JSON.parse(raw);
-      } catch {
-        throw new Error(raw.substring(0, 3000));
-      }
-
-      if (data.error) throw new Error(data.error);
+      if (data && data.error) throw new Error(data.error);
 
       // Normalize user passwords
       const normalized = (Array.isArray(data) ? data : []).map((u: any) => ({
@@ -82,7 +137,11 @@ export default function LoginScreen() {
       }));
       setUsers(normalized);
     } catch (err: any) {
-      setError(err.message || "Failed to load users.");
+      if (err?.name === "AbortError") {
+        setError("Request timed out. Please check your connection and retry.");
+      } else {
+        setError(err.message || "Failed to load users.");
+      }
     } finally {
       setLoading(false);
     }
@@ -97,19 +156,16 @@ export default function LoginScreen() {
       Alert.alert("Error", "PIN must be 4 digits");
       return;
     }
-
     const foundUser = users.find((u) => u.password === pin);
     if (!foundUser) {
       Alert.alert("Login Failed", "Invalid PIN");
       return;
     }
-
     await saveUser({
       username: foundUser.username,
       display_name: foundUser.display_name,
       role: foundUser.role,
     });
-
     router.replace("/(tabs)");
   };
 
