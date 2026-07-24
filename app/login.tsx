@@ -48,15 +48,18 @@ export default function LoginScreen() {
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
 
       // Check that the response is actually JSON
+      // After checking response.ok ...
+      const raw = await response.text(); // read ONCE
       let data;
       try {
-        data = await response.json();
-      } catch (jsonError) {
-        const text = await response.text();
+        data = JSON.parse(raw);
+      } catch (parseError) {
         throw new Error(
-          `Failed to parse JSON. First 150 chars: ${text.substring(0, 150)}`,
+          `Failed to parse JSON. First 200 chars: ${raw.substring(0, 200)}`,
         );
       }
+
+      // Now data is your parsed JSON
       if (data.error) throw new Error(data.error);
 
       // Validate data structure
