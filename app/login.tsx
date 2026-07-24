@@ -48,15 +48,15 @@ export default function LoginScreen() {
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
 
       // Check that the response is actually JSON
-      const contentType = response.headers.get("content-type");
-      if (!contentType || !contentType.includes("application/json")) {
+      let data;
+      try {
+        data = await response.json();
+      } catch (jsonError) {
         const text = await response.text();
-        // Log it for any remote debugging, but also show it in the UI
-        console.error("Non-JSON response:", text.substring(0, 500));
-        throw new Error(`Expected JSON but got: ${text.substring(0, 150)}...`);
+        throw new Error(
+          `Failed to parse JSON. First 150 chars: ${text.substring(0, 150)}`,
+        );
       }
-
-      const data = await response.json();
       if (data.error) throw new Error(data.error);
 
       // Validate data structure
