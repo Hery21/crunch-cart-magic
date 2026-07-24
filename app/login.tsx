@@ -28,16 +28,11 @@ export default function LoginScreen() {
       }
 
       const settings = await loadSettings();
-      let url = settings.sheetsEndpoint?.trim();
+      const url = settings.sheetsEndpoint?.trim();
       if (!url) {
         setLoading(false);
         setError("No Google Sheets endpoint configured.");
         return;
-      }
-
-      // Ensure URL has a protocol
-      if (!/^https?:\/\//i.test(url)) {
-        url = "https://" + url;
       }
 
       const controller = new AbortController();
@@ -45,39 +40,30 @@ export default function LoginScreen() {
       const response = await fetch(url, { signal: controller.signal });
       clearTimeout(timeout);
 
-      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
+      }
 
-      // Check that the response is actually JSON
-      // After checking response.ok ...
-      const raw = await response.text(); // read ONCE
+      const raw = await response.text();
       let data;
       try {
         data = JSON.parse(raw);
-      } catch (parseError) {
+      } catch {
         throw new Error(
-          `Failed to parse JSON. First 200 chars: ${raw.substring(0, 1000)}`,
+          `Endpoint returned non‑JSON data. First 200 chars: ${raw.substring(0, 200)}`,
         );
       }
 
-      // Now data is your parsed JSON
       if (data.error) throw new Error(data.error);
 
-      // Validate data structure
-      if (!Array.isArray(data)) {
-        throw new Error("Expected an array of users, but got " + typeof data);
-      }
-
-      const normalized = data.map((u: any) => ({
+      // Normalize user passwords
+      const normalized = (Array.isArray(data) ? data : []).map((u: any) => ({
         ...u,
         password: String(u.password ?? ""),
       }));
       setUsers(normalized);
     } catch (err: any) {
-      if (err.name === "AbortError") {
-        setError("Request timed out. Check your connection and try again.");
-      } else {
-        setError(err.message || "Failed to load users.");
-      }
+      setError(err.message || "Failed to load users.");
     } finally {
       setLoading(false);
     }
