@@ -37,26 +37,27 @@ export default function LoginScreen() {
 
       const controller = new AbortController();
       const timeout = setTimeout(() => controller.abort(), 10000);
-      const response = await fetch(url, {
-        signal: controller.signal,
-        headers: {
-          "User-Agent":
-            "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1",
-        },
-      });
-      clearTimeout(timeout);
+      const raw = await (async () => {
+        const response = await fetch(url, {
+          signal: controller.signal,
+          headers: {
+            "User-Agent":
+              "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1",
+          },
+        });
 
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}`);
-      }
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
 
-      const raw = await response.text();
+        const text = await response.text();
+        return text;
+      })();
+
       let data;
       try {
         data = JSON.parse(raw);
       } catch {
         throw new Error(
-          `Endpoint returned non‑JSON data. First 200 chars: ${raw.substring(0, 200)}`,
+          `Endpoint returned non‑JSON. First 200 chars: ${raw.substring(0, 200)}`,
         );
       }
 
