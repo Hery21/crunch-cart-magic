@@ -55,7 +55,7 @@ export default function LoginScreen() {
         data = JSON.parse(raw);
       } catch (parseError) {
         throw new Error(
-          `Failed to parse JSON. First 200 chars: ${raw.substring(0, 200)}`,
+          `Failed to parse JSON. First 200 chars: ${raw.substring(0, 1000)}`,
         );
       }
 
