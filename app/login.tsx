@@ -34,7 +34,7 @@ export default function LoginScreen() {
       console.log("url", url)
       if (!url) {
         setLoading(false);
-        setError("No Google Sheets endpoint configured.");
+        setError(`No Google Sheets endpoint configured. ${url}`);
         return;
       }
 
