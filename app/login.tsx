@@ -31,6 +31,7 @@ export default function LoginScreen() {
       // 2. Load settings and fetch users
       const settings = await loadSettings();
       const url = settings.sheetsEndpoint?.trim();
+      console.log("url", url)
       if (!url) {
         setLoading(false);
         setError("No Google Sheets endpoint configured.");
@@ -53,7 +54,7 @@ export default function LoginScreen() {
       }));
       setUsers(normalized);
     } catch (err: any) {
-      setError(err.message || "Failed to load users.");
+      setError(`${err.message} ${url}` || "Failed to load users.");
     } finally {
       setLoading(false);
     }
