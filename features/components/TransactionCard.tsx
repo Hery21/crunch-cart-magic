@@ -20,6 +20,8 @@ export default function TransactionCard({ transaction }: Props) {
     year: "numeric",
   });
 
+console.log("transaction.items", transaction.items)
+
   return (
     <View style={s.card}>
       <View

@@ -1,5 +1,5 @@
 // features/pos/transaction-tab.tsx
-import { formatRp, loadTransactions } from "@/lib/pos-store";
+import { formatRp, fetchTransactionsFromSheets, loadSettings, loadTransactions } from "@/lib/pos-store";
 import type { PaymentMethod, Transaction } from "@/lib/pos-types";
 import { C, R } from "@/lib/theme";
 import { Ionicons } from "@expo/vector-icons";
@@ -20,6 +20,7 @@ const PAYMENT_METHODS: PaymentMethod[] = ["Cash", "QRIS", "Kuantar"];
 
 export default function TransactionTab() {
   const [allTransactions, setAllTransactions] = useState<Transaction[]>([]);
+  const [loading, setLoading] = useState(true);
   const [startDate, setStartDate] = useState<Date | null>(null);
   const [endDate, setEndDate] = useState<Date | null>(null);
   const [selectedPayment, setSelectedPayment] = useState<PaymentMethod | "">(
@@ -28,8 +29,29 @@ export default function TransactionTab() {
   const [showPicker, setShowPicker] = useState(false);
   const [pickerMode, setPickerMode] = useState<"start" | "end">("start");
 
+  // ============================================================
+  // Fetch transactions from Google Sheets (or fallback to local)
+  // ============================================================
   useEffect(() => {
-    loadTransactions().then(setAllTransactions);
+    const load = async () => {
+      try {
+        setLoading(true);
+        const settings = await loadSettings();
+        if (settings.sheetsEndpoint) {
+          const data = await fetchTransactionsFromSheets(settings.sheetsEndpoint);
+          setAllTransactions(data);
+        } else {
+          // Fallback to local storage if no endpoint configured
+          const data = await loadTransactions();
+          setAllTransactions(data);
+        }
+      } catch (error) {
+        console.error("Failed to load transactions:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    load();
   }, []);
 
   const toDateString = (d: Date | null): string =>
@@ -65,11 +87,21 @@ export default function TransactionTab() {
   const totalRevenue = filtered.reduce((sum, tx) => sum + tx.grandTotal, 0);
   const totalOrders = filtered.length;
 
+  // ---- Loading state ----
+  if (loading) {
+    return (
+      <View style={s.centered}>
+        <Text style={s.loadingText}>Memuat transaksi...</Text>
+      </View>
+    );
+  }
+
+  // ---- Main render ----
   return (
     <ScrollView
       style={{ flex: 1 }}
       contentContainerStyle={s.scrollContent}
-      stickyHeaderIndices={[0]} // makes the first child sticky
+      stickyHeaderIndices={[0]}
       showsVerticalScrollIndicator={false}
     >
       {/* Sticky header: summary + filter */}
@@ -178,7 +210,7 @@ export default function TransactionTab() {
         </View>
       </View>
 
-      {/* Transaction list (non‑sticky) */}
+      {/* Transaction list */}
       {filtered.length === 0 ? (
         <View style={s.empty}>
           <Ionicons name="receipt-outline" size={48} color={C.mutedFg} />
@@ -196,7 +228,7 @@ const s = StyleSheet.create({
     paddingBottom: 32,
   },
   stickyHeader: {
-    backgroundColor: C.background, // opaque so content doesn't show through
+    backgroundColor: C.background,
   },
   summaryRow: {
     flexDirection: "row",
@@ -303,5 +335,15 @@ const s = StyleSheet.create({
     color: C.mutedFg,
     textAlign: "center",
     padding: 32,
+  },
+  centered: {
+    padding: 40,
+    alignItems: "center",
+    gap: 12,
+  },
+  loadingText: {
+    fontFamily: "Poppins_400Regular",
+    fontSize: 14,
+    color: C.mutedFg,
   },
 });

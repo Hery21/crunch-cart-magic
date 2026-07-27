@@ -29,7 +29,7 @@ import {
 
 interface Props {
   variantId: VariantId;
-  prices: PriceEntry;
+  catalog: CatalogItem[];
   tier: PriceTier;
   onClose: () => void;
   onAdd: (item: CartItem) => void;

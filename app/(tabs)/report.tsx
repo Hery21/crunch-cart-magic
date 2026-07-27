@@ -1,6 +1,6 @@
 // app/report.tsx
 import TransactionCard from "@/features/components/TransactionCard";
-import { formatRp, loadTransactions } from "@/lib/pos-store";
+import { formatRp, fetchTransactionsFromSheets, loadSettings, loadTransactions } from "@/lib/pos-store";
 import type { PaymentMethod, Transaction } from "@/lib/pos-types";
 import { C, R } from "@/lib/theme";
 import { Ionicons } from "@expo/vector-icons";
@@ -15,10 +15,13 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { useNavigation } from '@react-navigation/native';
 
 const PAYMENT_METHODS: PaymentMethod[] = ["Cash", "QRIS", "Kuantar"];
 
 export default function ReportScreen() {
+
+const navigation = useNavigation();
   const [allTransactions, setAllTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedPayment, setSelectedPayment] = useState<PaymentMethod | "">(
@@ -28,8 +31,16 @@ export default function ReportScreen() {
   useEffect(() => {
     (async () => {
       try {
-        const data = await loadTransactions();
-        setAllTransactions(data);
+        setLoading(true);
+        const settings = await loadSettings();
+        if (settings.sheetsEndpoint) {
+          const data = await fetchTransactionsFromSheets(settings.sheetsEndpoint);
+          setAllTransactions(data);
+        } else {
+          // Fallback to local storage if no endpoint
+          const data = await loadTransactions();
+          setAllTransactions(data);
+        }
       } catch (e) {
         console.error(e);
       } finally {
@@ -64,7 +75,7 @@ export default function ReportScreen() {
     <SafeAreaView style={s.root} edges={["top"]}>
       {/* Header – compact */}
       <View style={s.header}>
-        <TouchableOpacity onPress={() => router.back()} style={s.backBtn}>
+        <TouchableOpacity onPress={() => navigation.canGoBack() ? router.back() : router.replace('/')} style={s.backBtn}>
           <Ionicons name="arrow-back" size={20} color={C.foreground} />
         </TouchableOpacity>
         <Text style={s.headerTitle}>Laporan Penjualan</Text>

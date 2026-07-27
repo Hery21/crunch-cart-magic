@@ -1,13 +1,11 @@
-import {
-  DEFAULT_SETTINGS,
-  VARIANTS,
-  type PriceTier,
-  type Size,
-  type VariantId,
-} from "@/lib/pos-types";
+import { fetchCatalog, updateCatalogPrices } from "@/lib/pos-store";
+import type { CatalogItem } from "@/lib/pos-store";
 import { C, R } from "@/lib/theme";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
+  ActivityIndicator,
+  Alert,
+  FlatList,
   StyleSheet,
   Text,
   TextInput,
@@ -16,202 +14,204 @@ import {
 } from "react-native";
 
 interface Props {
-  settings: typeof DEFAULT_SETTINGS;
-  onSave: (s: typeof DEFAULT_SETTINGS) => void;
+  settings: { sheetsEndpoint?: string };
+  onSave: (s: any) => void;
 }
 
 export default function PriceManager({ settings, onSave }: Props) {
-  const [prices, setPrices] = useState(
-    () => JSON.parse(JSON.stringify(settings.prices)) as typeof settings.prices,
-  );
+  const [loading, setLoading] = useState(true);
+  const [syncing, setSyncing] = useState(false);
+  const [catalog, setCatalog] = useState<CatalogItem[]>([]);
+  const [editedRows, setEditedRows] = useState<{ [id: number]: { price_normal: number; price_kuantar: number } }>({});
 
-  function setPrice(
-    variantId: VariantId,
-    size: Size,
-    tier: PriceTier,
-    value: number,
-  ) {
-    setPrices((p) => ({
-      ...p,
-      [variantId]: {
-        ...p[variantId],
-        [size]: { ...p[variantId][size], [tier]: value },
-      },
+  useEffect(() => {
+    const load = async () => {
+      if (!settings.sheetsEndpoint) {
+        setLoading(false);
+        return;
+      }
+      try {
+        const data = await fetchCatalog(settings.sheetsEndpoint, true);
+        setCatalog(data);
+      } catch (error) {
+        Alert.alert("Error", "Failed to load catalog");
+      } finally {
+        setLoading(false);
+      }
+    };
+    load();
+  }, [settings.sheetsEndpoint]);
+
+  const handlePriceChange = (id: number, field: 'price_normal' | 'price_kuantar', value: string) => {
+    const num = Number(value.replace(/\D/g, '')) || 0;
+    setEditedRows(prev => ({
+      ...prev,
+      [id]: { ...prev[id], [field]: num },
     }));
+  };
+
+  const getRowPrice = (row: CatalogItem) => {
+    const edits = editedRows[row.id];
+    return {
+      normal: edits?.price_normal ?? row.price_normal,
+      kuantar: edits?.price_kuantar ?? row.price_kuantar,
+    };
+  };
+
+  const handleSave = async () => {
+    if (!settings.sheetsEndpoint) {
+      Alert.alert("Error", "No sheets endpoint configured");
+      return;
+    }
+
+    const updatedRows = catalog.map(row => {
+      const edits = editedRows[row.id];
+      if (edits) {
+        return { ...row, price_normal: edits.price_normal, price_kuantar: edits.price_kuantar };
+      }
+      return row;
+    });
+
+    setSyncing(true);
+    const success = await updateCatalogPrices(settings.sheetsEndpoint, updatedRows);
+    setSyncing(false);
+
+    if (success) {
+      Alert.alert("Berhasil", "Harga diperbarui di Google Sheets");
+      setCatalog(updatedRows);
+      setEditedRows({});
+      // Optionally save to local settings as a backup
+      onSave({ ...settings });
+    } else {
+      Alert.alert("Error", "Gagal menyimpan ke Google Sheets");
+    }
+  };
+
+  if (loading) {
+    return (
+      <View style={s.centered}>
+        <ActivityIndicator size="large" color={C.primary} />
+        <Text style={s.loadingText}>Memuat data...</Text>
+      </View>
+    );
+  }
+
+  if (!settings.sheetsEndpoint) {
+    return (
+      <View style={s.centered}>
+        <Text style={s.emptyText}>Google Sheets endpoint tidak dikonfigurasi.</Text>
+        <Text style={s.emptySub}>Atur di Pengaturan terlebih dahulu.</Text>
+      </View>
+    );
   }
 
   return (
-    <View style={{ gap: 12 }}>
-      <View style={s.card}>
-        <Text style={s.cardTitle}>Manajemen Harga (16 harga)</Text>
-        <Text style={s.cardDesc}>
-          Harga <Text style={{ fontFamily: "Poppins_700Bold" }}>Normal</Text>{" "}
-          berlaku untuk Cash & QRIS. Harga{" "}
-          <Text style={{ fontFamily: "Poppins_700Bold" }}>Kuantar</Text> berlaku
-          otomatis saat metode bayar Kuantar dipilih.
-        </Text>
-        <View style={{ gap: 10, marginTop: 8 }}>
-          {VARIANTS.map((v) => (
-            <View key={v.id} style={s.variantBox}>
-              <Text style={s.variantName}>{v.name}</Text>
-              {(["regular", "jumbo"] as Size[]).map((sz) => (
-                <View key={sz} style={s.sizeBox}>
-                  <Text style={s.sizeLabel}>
-                    {sz === "jumbo" ? "Jumbo" : "Regular"}
-                  </Text>
-                  <View style={s.priceGrid}>
-                    <View style={{ flex: 1 }}>
-                      <Text style={s.priceTierLabel}>Normal (Cash/QRIS)</Text>
-                      <TextInput
-                        style={s.priceInput}
-                        value={String(prices[v.id]?.[sz]?.normal ?? 0)}
-                        onChangeText={(t) =>
-                          setPrice(
-                            v.id,
-                            sz,
-                            "normal",
-                            Number(t.replace(/\D/g, "")) || 0,
-                          )
-                        }
-                        keyboardType="numeric"
-                      />
-                    </View>
-                    <View style={{ flex: 1 }}>
-                      <Text style={[s.priceTierLabel, { color: "#9A3412" }]}>
-                        Kuantar
-                      </Text>
-                      <TextInput
-                        style={s.priceInput}
-                        value={String(prices[v.id]?.[sz]?.kuantar ?? 0)}
-                        onChangeText={(t) =>
-                          setPrice(
-                            v.id,
-                            sz,
-                            "kuantar",
-                            Number(t.replace(/\D/g, "")) || 0,
-                          )
-                        }
-                        keyboardType="numeric"
-                      />
-                    </View>
-                  </View>
+    <View style={s.container}>
+      <Text style={s.title}>Manajemen Harga</Text>
+      <Text style={s.sub}>Edit harga di bawah, lalu simpan ke Google Sheets.</Text>
+      <FlatList
+        data={catalog}
+        keyExtractor={item => item.id.toString()}
+        renderItem={({ item }) => {
+          const price = getRowPrice(item);
+          return (
+            <View style={s.row}>
+              <Text style={s.rowLabel}>
+                {item.variant} {item.size}
+                {item.filling ? ` • ${item.filling}` : ''}
+                {item.tabur ? ` • ${item.tabur}` : ''}
+                {item.celup ? ` • ${item.celup}` : ''}
+              </Text>
+              <View style={s.priceInputs}>
+                <View style={s.priceGroup}>
+                  <Text style={s.priceLabel}>Normal</Text>
+                  <TextInput
+                    style={s.input}
+                    value={String(price.normal)}
+                    onChangeText={(t) => handlePriceChange(item.id, 'price_normal', t)}
+                    keyboardType="numeric"
+                  />
                 </View>
-              ))}
+                <View style={s.priceGroup}>
+                  <Text style={[s.priceLabel, { color: '#9A3412' }]}>Kuantar</Text>
+                  <TextInput
+                    style={s.input}
+                    value={String(price.kuantar)}
+                    onChangeText={(t) => handlePriceChange(item.id, 'price_kuantar', t)}
+                    keyboardType="numeric"
+                  />
+                </View>
+              </View>
             </View>
-          ))}
-        </View>
-      </View>
-      <View style={s.actionRow}>
-        <TouchableOpacity
-          style={s.btnPrimary}
-          onPress={() => onSave({ ...settings, prices })}
-        >
-          <Text style={s.btnPrimaryText}>Simpan</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={s.btnOutline}
-          onPress={() =>
-            setPrices(JSON.parse(JSON.stringify(DEFAULT_SETTINGS.prices)))
-          }
-        >
-          <Text style={s.btnOutlineText}>Reset Default</Text>
-        </TouchableOpacity>
-      </View>
+          );
+        }}
+        contentContainerStyle={s.listContent}
+        showsVerticalScrollIndicator={false}
+      />
+      <TouchableOpacity style={s.saveBtn} onPress={handleSave} disabled={syncing}>
+        <Text style={s.saveBtnText}>{syncing ? "Menyimpan..." : "Simpan ke Sheets"}</Text>
+      </TouchableOpacity>
     </View>
   );
 }
 
 const s = StyleSheet.create({
-  card: {
+  container: { flex: 1, padding: 16 },
+  centered: { flex: 1, justifyContent: 'center', alignItems: 'center', gap: 12, padding: 24 },
+  loadingText: { fontFamily: 'Poppins_400Regular', fontSize: 14, color: C.mutedFg },
+  emptyText: { fontFamily: 'Poppins_600SemiBold', fontSize: 16, color: C.foreground, textAlign: 'center' },
+  emptySub: { fontFamily: 'Poppins_400Regular', fontSize: 13, color: C.mutedFg, textAlign: 'center' },
+  title: { fontFamily: 'Poppins_700Bold', fontSize: 18, color: C.foreground },
+  sub: { fontFamily: 'Poppins_400Regular', fontSize: 13, color: C.mutedFg, marginBottom: 12 },
+  listContent: { gap: 8, paddingBottom: 12 },
+  row: {
     borderWidth: 1,
     borderColor: C.border,
-    borderRadius: R["2xl"],
-    backgroundColor: C.card,
-    padding: 14,
-  },
-  cardTitle: {
-    fontFamily: "Poppins_700Bold",
-    fontSize: 15,
-    color: C.foreground,
-    marginBottom: 4,
-  },
-  cardDesc: {
-    fontFamily: "Poppins_400Regular",
-    fontSize: 11,
-    color: C.mutedFg,
-    marginBottom: 4,
-  },
-  variantBox: {
-    borderWidth: 1,
-    borderColor: C.border + "70",
-    borderRadius: R.xl,
-    padding: 10,
-    gap: 8,
-  },
-  variantName: {
-    fontFamily: "Poppins_600SemiBold",
-    fontSize: 13,
-    color: C.foreground,
-  },
-  sizeBox: {
-    borderWidth: 1,
-    borderColor: C.border + "50",
     borderRadius: R.lg,
-    backgroundColor: C.muted + "50",
     padding: 10,
-    gap: 6,
+    backgroundColor: C.card,
   },
-  sizeLabel: {
-    fontFamily: "Poppins_700Bold",
-    fontSize: 10,
-    textTransform: "uppercase",
-    letterSpacing: 0.5,
-    color: C.amberText,
-  },
-  priceGrid: { flexDirection: "row", gap: 8 },
-  priceTierLabel: {
-    fontFamily: "Poppins_700Bold",
-    fontSize: 9,
-    textTransform: "uppercase",
-    letterSpacing: 0.5,
-    color: "#065F46",
+  rowLabel: {
+    fontFamily: 'Poppins_500Medium',
+    fontSize: 12,
+    color: C.foreground,
     marginBottom: 4,
   },
-  priceInput: {
+  priceInputs: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  priceGroup: {
+    flex: 1,
+  },
+  priceLabel: {
+    fontFamily: 'Poppins_600SemiBold',
+    fontSize: 10,
+    textTransform: 'uppercase',
+    color: '#065F46',
+    marginBottom: 2,
+  },
+  input: {
     borderWidth: 1,
     borderColor: C.border,
     borderRadius: R.md,
-    paddingVertical: 6,
-    paddingHorizontal: 10,
-    fontFamily: "Poppins_400Regular",
-    fontSize: 13,
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+    fontFamily: 'Poppins_400Regular',
+    fontSize: 14,
     color: C.foreground,
-    backgroundColor: C.card,
+    backgroundColor: C.background,
   },
-  actionRow: { flexDirection: "row", gap: 8 },
-  btnPrimary: {
-    flex: 1,
+  saveBtn: {
     backgroundColor: C.primary,
     borderRadius: R.xl,
-    paddingVertical: 13,
-    alignItems: "center",
-  },
-  btnPrimaryText: {
-    fontFamily: "Poppins_700Bold",
-    fontSize: 14,
-    color: C.primaryFg,
-  },
-  btnOutline: {
-    flex: 1,
-    borderWidth: 1,
-    borderColor: C.border,
-    borderRadius: R.xl,
     paddingVertical: 12,
-    alignItems: "center",
+    alignItems: 'center',
+    marginTop: 12,
   },
-  btnOutlineText: {
-    fontFamily: "Poppins_600SemiBold",
-    fontSize: 13,
-    color: C.foreground,
+  saveBtnText: {
+    fontFamily: 'Poppins_700Bold',
+    fontSize: 15,
+    color: C.primaryFg,
   },
 });
