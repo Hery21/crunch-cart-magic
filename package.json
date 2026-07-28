@@ -18,11 +18,10 @@
   "dependencies": {
     "@expo-google-fonts/poppins": "^0.4.1",
     "@expo/vector-icons": "^15.0.3",
-    "@react-native-async-storage/async-stor age": "^3.1.1",
+    "@react-native-async-storage/async-storage": "^3.1.1",
     "@react-native-community/datetimepicker": "8.6.0",
     "expo": "~55.0.26",
     "expo-constants": "~55.0.16",
-
     "expo-font": "~55.0.8",
     "expo-linear-gradient": "^56.0.4",
     "expo-linking": "~55.0.15",
