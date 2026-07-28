@@ -1,4 +1,6 @@
 import {
+  type CatalogItem,
+  fetchCatalog,
   loadCart,
   loadPayment,
   loadSettings,
@@ -14,17 +16,57 @@ import {
   type VariantId,
   tierForPayment,
 } from "@/lib/pos-types";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 export interface PricedCartItem extends CartItem {
   unitPrice: number;
   priceTier: PriceTier;
 }
 
+/** Map an app VariantId to one or more catalog variant strings. */
+function toCatalogVariants(variantId: VariantId): string[] {
+  if (variantId === "tabur_celup") return ["tabur", "celup"];
+  if (variantId === "filling_tabur_celup") return ["filling_tabur", "filling_celup"];
+  return [variantId];
+}
+
+/** Look up the price for a variant+size from the catalog. */
+function catalogPrice(
+  catalog: CatalogItem[],
+  variantId: VariantId,
+  size: Size,
+  tier: PriceTier,
+): number {
+  const variants = toCatalogVariants(variantId);
+  const row = catalog.find((r) => variants.includes(r.variant) && r.size === size);
+  if (!row) return 0;
+  return tier === "kuantar" ? row.price_kuantar : row.price_normal;
+}
+
 export function usePos() {
   const [settings, setSettings] = useState<Settings | null>(null);
+  const [catalog, setCatalog] = useState<CatalogItem[]>([]);
+  const [catalogLoading, setCatalogLoading] = useState(true);
+  const [catalogError, setCatalogError] = useState<string | null>(null);
   const [cart, setCart] = useState<CartItem[]>([]);
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("Cash");
+
+  const loadCatalog = useCallback(async (endpoint: string, force = false) => {
+    setCatalogLoading(true);
+    setCatalogError(null);
+    try {
+      const data = await fetchCatalog(endpoint, force);
+      if (data.length > 0) {
+        setCatalog(data);
+      } else {
+        setCatalogError("Katalog kosong – periksa koneksi atau endpoint");
+      }
+    } catch {
+      setCatalogError("Gagal memuat katalog");
+    } finally {
+      setCatalogLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
     Promise.all([loadSettings(), loadCart(), loadPayment()]).then(
@@ -32,6 +74,12 @@ export function usePos() {
         setSettings(s);
         setCart(c);
         if (p) setPaymentMethod(p as PaymentMethod);
+        if (s.sheetsEndpoint) {
+          loadCatalog(s.sheetsEndpoint);
+        } else {
+          setCatalogLoading(false);
+          setCatalogError("Sheets endpoint belum dikonfigurasi");
+        }
       },
     );
   }, []);
@@ -39,28 +87,26 @@ export function usePos() {
   useEffect(() => {
     if (settings) saveCart(cart);
   }, [cart]);
+
   useEffect(() => {
     savePayment(paymentMethod);
   }, [paymentMethod]);
 
   const tier: PriceTier = tierForPayment(paymentMethod);
 
-  function priceFor(
-    variantId: VariantId,
-    size: Size,
-    t: PriceTier = tier,
-  ): number {
-    return settings?.prices[variantId]?.[size]?.[t] ?? 0;
+  /** Price for a variant+size at the current payment tier. */
+  function priceFor(variantId: VariantId, size: Size): number {
+    return catalogPrice(catalog, variantId, size, tier);
   }
 
   const cartWithPrices = useMemo<PricedCartItem[]>(
     () =>
       cart.map((i) => ({
         ...i,
-        unitPrice: priceFor(i.variantId, i.size),
+        unitPrice: catalogPrice(catalog, i.variantId, i.size, tier),
         priceTier: tier,
       })),
-    [cart, settings, tier],
+    [cart, catalog, tier],
   );
 
   const subtotal = useMemo(
@@ -90,8 +136,18 @@ export function usePos() {
     setCart([]);
   }
 
+  function reloadCatalog() {
+    if (settings?.sheetsEndpoint) {
+      loadCatalog(settings.sheetsEndpoint, true);
+    }
+  }
+
   return {
     settings,
+    catalog,
+    catalogLoading,
+    catalogError,
+    reloadCatalog,
     cart,
     cartWithPrices,
     cartCount,

@@ -1,40 +1,5 @@
 import { Platform } from "react-native";
 
-// ─── AsyncStorage polyfill ──────────────────────────────────────────────
-let AsyncStorage: typeof import("@react-native-async-storage/async-storage").default;
-
-if (Platform.OS === "web") {
-  AsyncStorage = {
-    getItem: async (key: string) => {
-      try { return localStorage.getItem(key) ?? null; } catch { return null; }
-    },
-    setItem: async (key: string, value: string) => {
-      try { localStorage.setItem(key, value); } catch {}
-    },
-    removeItem: async (key: string) => {
-      try { localStorage.removeItem(key); } catch {}
-    },
-    clear: async () => {
-      try { localStorage.clear(); } catch {}
-    },
-    getAllKeys: async () => {
-      try { return Object.keys(localStorage); } catch { return []; }
-    },
-    multiGet: async (keys: string[]) => {
-      return keys.map((key) => [key, localStorage.getItem(key) ?? null]);
-    },
-    multiSet: async (keyValuePairs: Array<[string, string]>) => {
-      keyValuePairs.forEach(([key, value]) => localStorage.setItem(key, value));
-    },
-    multiRemove: async (keys: string[]) => {
-      keys.forEach((key) => localStorage.removeItem(key));
-    },
-  } as any;
-} else {
-  const NativeAsyncStorage = require("@react-native-async-storage/async-storage").default;
-  AsyncStorage = NativeAsyncStorage;
-}
-
 // ─── Imports ───────────────────────────────────────────────────────────────
 import {
   DEFAULT_PRICES,
@@ -43,6 +8,56 @@ import {
   type Settings,
   type Transaction,
 } from "./pos-types";
+
+// ─── AsyncStorage polyfill ──────────────────────────────────────────────
+let AsyncStorage: typeof import("@react-native-async-storage/async-storage").default;
+
+if (Platform.OS === "web") {
+  AsyncStorage = {
+    getItem: async (key: string) => {
+      try {
+        return localStorage.getItem(key) ?? null;
+      } catch {
+        return null;
+      }
+    },
+    setItem: async (key: string, value: string) => {
+      try {
+        localStorage.setItem(key, value);
+      } catch {}
+    },
+    removeItem: async (key: string) => {
+      try {
+        localStorage.removeItem(key);
+      } catch {}
+    },
+    clear: async () => {
+      try {
+        localStorage.clear();
+      } catch {}
+    },
+    getAllKeys: async () => {
+      try {
+        return Object.keys(localStorage);
+      } catch {
+        return [];
+      }
+    },
+    multiGet: async (keys: string[]) => {
+      return keys.map((key) => [key, localStorage.getItem(key) ?? null]);
+    },
+    multiSet: async (keyValuePairs: [string, string][]) => {
+      keyValuePairs.forEach(([key, value]) => localStorage.setItem(key, value));
+    },
+    multiRemove: async (keys: string[]) => {
+      keys.forEach((key) => localStorage.removeItem(key));
+    },
+  } as any;
+} else {
+  const NativeAsyncStorage =
+    require("@react-native-async-storage/async-storage").default;
+  AsyncStorage = NativeAsyncStorage;
+}
 
 const SETTINGS_KEY = "ccr.settings";
 const TX_KEY = "ccr.transactions";
@@ -60,7 +75,10 @@ async function safeGetItem(key: string): Promise<string | null> {
     if (useMemoryFallback) return memoryStore.get(key) ?? null;
     return await AsyncStorage.getItem(key);
   } catch (error) {
-    if (error instanceof Error && error.message.includes("Native module is null")) {
+    if (
+      error instanceof Error &&
+      error.message.includes("Native module is null")
+    ) {
       useMemoryFallback = true;
       return memoryStore.get(key) ?? null;
     }
@@ -76,7 +94,10 @@ async function safeSetItem(key: string, value: string): Promise<void> {
     }
     await AsyncStorage.setItem(key, value);
   } catch (error) {
-    if (error instanceof Error && error.message.includes("Native module is null")) {
+    if (
+      error instanceof Error &&
+      error.message.includes("Native module is null")
+    ) {
       useMemoryFallback = true;
       memoryStore.set(key, value);
     }
@@ -91,15 +112,25 @@ export async function loadSettings(): Promise<Settings> {
     const parsed = JSON.parse(raw);
     const incoming = parsed.prices ?? {};
     const migrated: Record<string, unknown> = {};
-    for (const k of Object.keys(DEFAULT_PRICES) as (keyof typeof DEFAULT_PRICES)[]) {
+    for (const k of Object.keys(
+      DEFAULT_PRICES,
+    ) as (keyof typeof DEFAULT_PRICES)[]) {
       const v = incoming[k];
       if (v && typeof v === "object" && "regular" in v && "jumbo" in v) {
         migrated[k] = v;
-      } else if (v && typeof v === "object" && ("normal" in v || "kuantar" in v)) {
+      } else if (
+        v &&
+        typeof v === "object" &&
+        ("normal" in v || "kuantar" in v)
+      ) {
         migrated[k] = {
           regular: {
-            normal: (v as Record<string, number>).normal ?? DEFAULT_PRICES[k].regular.normal,
-            kuantar: (v as Record<string, number>).kuantar ?? DEFAULT_PRICES[k].regular.kuantar,
+            normal:
+              (v as Record<string, number>).normal ??
+              DEFAULT_PRICES[k].regular.normal,
+            kuantar:
+              (v as Record<string, number>).kuantar ??
+              DEFAULT_PRICES[k].regular.kuantar,
           },
           jumbo: DEFAULT_PRICES[k].jumbo,
         };
@@ -107,7 +138,11 @@ export async function loadSettings(): Promise<Settings> {
         migrated[k] = DEFAULT_PRICES[k];
       }
     }
-    return { ...DEFAULT_SETTINGS, ...parsed, prices: migrated as Settings["prices"] };
+    return {
+      ...DEFAULT_SETTINGS,
+      ...parsed,
+      prices: migrated as Settings["prices"],
+    };
   } catch {
     return DEFAULT_SETTINGS;
   }
@@ -164,11 +199,19 @@ export function savePayment(pm: string): void {
 }
 
 // ─── User ──────────────────────────────────────────────────────────────────
-export async function saveUser(user: { username: string; display_name: string; role: string }): Promise<void> {
+export async function saveUser(user: {
+  username: string;
+  display_name: string;
+  role: string;
+}): Promise<void> {
   await safeSetItem(USER_KEY, JSON.stringify(user));
 }
 
-export async function loadUser(): Promise<{ username: string; display_name: string; role: string } | null> {
+export async function loadUser(): Promise<{
+  username: string;
+  display_name: string;
+  role: string;
+} | null> {
   try {
     const raw = await safeGetItem(USER_KEY);
     if (!raw) return null;
@@ -190,12 +233,25 @@ export async function clearUser(): Promise<void> {
   }
 }
 
+// ─── Invoice ID ──────────────────────────────────────────────────────────
+export async function nextInvoiceId(): Promise<string> {
+  const settings = await loadSettings();
+  const counter = (settings.invoiceCounter ?? 0) + 1;
+  await saveSettings({ ...settings, invoiceCounter: counter });
+  const d = new Date();
+  const dateStr =
+    String(d.getFullYear()) +
+    String(d.getMonth() + 1).padStart(2, "0") +
+    String(d.getDate()).padStart(2, "0");
+  return `INV-${dateStr}-${String(counter).padStart(4, "0")}`;
+}
+
 // ─── Catalog (Single Source of Truth) ────────────────────────────────────
 
 /** A single row from the product_variants sheet */
 export interface CatalogItem {
   id: number;
-  variant: string;          // "original", "filling", "tabur", "celup", "filling_tabur", "filling_celup"
+  variant: string; // "original", "filling", "tabur", "celup", "filling_tabur", "filling_celup"
   size: "regular" | "jumbo";
   filling?: string;
   tabur?: string;
@@ -206,11 +262,19 @@ export interface CatalogItem {
 
 let catalogCache: CatalogItem[] | null = null;
 
+/** Clears the in-memory catalog cache (and the AsyncStorage cache if needed). */
+export function invalidateCatalogCache(): void {
+  catalogCache = null;
+}
+
 /**
  * Fetches the catalog from Google Sheets.
  * Caches the result in memory and AsyncStorage.
  */
-export async function fetchCatalog(endpoint: string, forceRefresh = false): Promise<CatalogItem[]> {
+export async function fetchCatalog(
+  endpoint: string,
+  forceRefresh = false,
+): Promise<CatalogItem[]> {
   if (!endpoint) return [];
 
   // Check memory cache
@@ -230,7 +294,9 @@ export async function fetchCatalog(endpoint: string, forceRefresh = false): Prom
 
   // Fetch from network
   try {
-    const url = endpoint.includes('?') ? `${endpoint}&type=catalog` : `${endpoint}?type=catalog`;
+    const url = endpoint.includes("?")
+      ? `${endpoint}&type=catalog`
+      : `${endpoint}?type=catalog`;
     const response = await fetch(url);
     if (!response.ok) return [];
     const data = await response.json();
@@ -241,7 +307,7 @@ export async function fetchCatalog(endpoint: string, forceRefresh = false): Prom
     await safeSetItem(CATALOG_KEY, JSON.stringify(data));
     return data;
   } catch (error) {
-    console.error('Failed to fetch catalog:', error);
+    console.error("Failed to fetch catalog:", error);
     return [];
   }
 }
@@ -273,16 +339,19 @@ export function getProductIdFromCatalog(
   const matchCelup = celup || undefined;
   const matchTabur = tabur || undefined;
 
-  const matched = catalog.find((row) =>
-    row.variant === actualVariant &&
-    row.size === size &&
-    (row.filling || undefined) === matchFilling &&
-    (row.celup || undefined) === matchCelup &&
-    (row.tabur || undefined) === matchTabur
+  const matched = catalog.find(
+    (row) =>
+      row.variant === actualVariant &&
+      row.size === size &&
+      (row.filling || undefined) === matchFilling &&
+      (row.celup || undefined) === matchCelup &&
+      (row.tabur || undefined) === matchTabur,
   );
 
   if (!matched) {
-    console.warn(`⚠️ No catalog match for: ${actualVariant}|${size}|${filling || ''}|${celup || ''}|${tabur || ''}`);
+    console.warn(
+      `⚠️ No catalog match for: ${actualVariant}|${size}|${filling || ""}|${celup || ""}|${tabur || ""}`,
+    );
     return 0;
   }
 
@@ -301,7 +370,14 @@ export function getPriceFromCatalog(
   celup?: string,
   tabur?: string,
 ): { normal: number; kuantar: number } | null {
-  const id = getProductIdFromCatalog(catalog, variantId, size, filling, celup, tabur);
+  const id = getProductIdFromCatalog(
+    catalog,
+    variantId,
+    size,
+    filling,
+    celup,
+    tabur,
+  );
   if (id === 0) return null;
   const row = catalog.find((r) => r.id === id);
   if (!row) return null;
@@ -319,7 +395,9 @@ export function getProductId(
 ): number {
   // This is a fallback – you should migrate to using the catalog.
   // The hardcoded map is removed to force migration.
-  console.warn('⚠️ getProductId() is deprecated. Use getProductIdFromCatalog() with a fetched catalog.');
+  console.warn(
+    "⚠️ getProductId() is deprecated. Use getProductIdFromCatalog() with a fetched catalog.",
+  );
   return 0;
 }
 
@@ -343,7 +421,7 @@ export async function pushToSheets(
       catalogData = await fetchCatalog(endpoint);
     }
     if (!catalogData || catalogData.length === 0) {
-      console.warn('⚠️ No catalog available – cannot resolve product IDs');
+      console.warn("⚠️ No catalog available – cannot resolve product IDs");
       return null;
     }
 
@@ -362,7 +440,7 @@ export async function pushToSheets(
           item.size,
           item.filling,
           item.celup,
-          item.tabur
+          item.tabur,
         );
         return {
           product_id: productId,
@@ -408,37 +486,49 @@ export function formatRp(n: number): string {
 
 // ─── Sheets Fetch/Update (for PriceManager) ────────────────────────────
 
-export async function updateCatalogPrices(endpoint: string, rows: any[]): Promise<boolean> {
+export async function updateCatalogPrices(
+  endpoint: string,
+  rows: any[],
+): Promise<boolean> {
   if (!endpoint) return false;
   try {
-    const payload = { type: 'update_prices', prices: rows };
+    const payload = { type: "update_prices", prices: rows };
     const formData = new URLSearchParams();
-    formData.append('payload', JSON.stringify(payload));
+    formData.append("payload", JSON.stringify(payload));
     const response = await fetch(endpoint, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
       body: formData.toString(),
     });
     if (!response.ok) return false;
     const result = await response.json();
+    if (result.success === true) {
+      // Invalidate cache so next fetch gets fresh data
+      invalidateCatalogCache();
+      await safeSetItem(CATALOG_KEY, JSON.stringify(rows));
+    }
     return result.success === true;
   } catch (error) {
-    console.error('Failed to update prices:', error);
+    console.error("Failed to update prices:", error);
     return false;
   }
 }
 
-export async function fetchTransactionsFromSheets(endpoint: string): Promise<Transaction[]> {
+export async function fetchTransactionsFromSheets(
+  endpoint: string,
+): Promise<Transaction[]> {
   if (!endpoint) return [];
   try {
-    const url = endpoint.includes('?') ? `${endpoint}&type=transactions` : `${endpoint}?type=transactions`;
+    const url = endpoint.includes("?")
+      ? `${endpoint}&type=transactions`
+      : `${endpoint}?type=transactions`;
     const response = await fetch(url);
     if (!response.ok) return [];
     const data = await response.json();
     if (data.error) return [];
     return data;
   } catch (error) {
-    console.error('Failed to fetch transactions:', error);
+    console.error("Failed to fetch transactions:", error);
     return [];
   }
 }

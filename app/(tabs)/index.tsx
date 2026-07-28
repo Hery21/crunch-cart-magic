@@ -79,7 +79,7 @@ export default function PosScreen() {
       // 2. Push to Google Sheets (if endpoint is configured)
       if (pos.settings?.sheetsEndpoint) {
         console.log("📤 Attempting to push to sheets:", pos.settings.sheetsEndpoint);
-        const success = await pushToSheets(pos.settings.sheetsEndpoint, tx);
+        const success = await pushToSheets(pos.settings.sheetsEndpoint, tx, pos.catalog);
         if (success) {
           console.log("✅ Sheets push successful");
           showFeedback("Data tersimpan ke Google Sheets");
@@ -107,10 +107,26 @@ export default function PosScreen() {
     }
   }
 
-  if (!pos.settings) {
+  if (!pos.settings || pos.catalogLoading) {
     return (
       <View style={s.loading}>
-        <Text style={s.loadingText}>Loading...</Text>
+        <Text style={s.loadingText}>
+          {!pos.settings ? "Loading..." : "Memuat katalog..."}
+        </Text>
+      </View>
+    );
+  }
+
+  if (pos.catalogError && pos.catalog.length === 0) {
+    return (
+      <View style={s.loading}>
+        <Text style={s.loadingText}>{pos.catalogError}</Text>
+        <TouchableOpacity
+          style={{ marginTop: 12, paddingHorizontal: 20, paddingVertical: 10, backgroundColor: C.primary, borderRadius: 999 }}
+          onPress={pos.reloadCatalog}
+        >
+          <Text style={{ color: "#fff", fontFamily: "Poppins_600SemiBold" }}>Coba Lagi</Text>
+        </TouchableOpacity>
       </View>
     );
   }
@@ -163,7 +179,7 @@ export default function PosScreen() {
       {activeVariant && pos.settings && (
         <CustomizeModal
           variantId={activeVariant}
-          prices={pos.settings.prices[activeVariant]}
+          catalog={pos.catalog}
           tier={pos.tier}
           onClose={() => setActiveVariant(null)}
           onAdd={(item) => {

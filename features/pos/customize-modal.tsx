@@ -1,4 +1,5 @@
-import { formatRp, getProductId } from "@/lib/pos-store";
+import { formatRp } from "@/lib/pos-store";
+import { type CatalogItem, getProductIdFromCatalog } from "@/lib/pos-store";
 import {
   CELUPS,
   FILLINGS,
@@ -9,7 +10,6 @@ import {
   type CartItem,
   type Celup,
   type Filling,
-  type PriceEntry,
   type PriceTier,
   type Size,
   type Tabur,
@@ -37,7 +37,7 @@ interface Props {
 
 export default function CustomizeModal({
   variantId,
-  prices,
+  catalog,
   tier,
   onClose,
   onAdd,
@@ -52,7 +52,26 @@ export default function CustomizeModal({
   const [qty, setQty] = useState(1);
   const [error, setError] = useState("");
 
-  const unitPrice = prices[size][tier];
+  /** Resolve catalog variant name based on app variantId + sauceMode. */
+  function catalogVariantsFor(sz?: Size): string[] {
+    if (variantId === "tabur_celup") {
+      return sauceMode === "tabur" ? ["tabur"] : ["celup"];
+    }
+    if (variantId === "filling_tabur_celup") {
+      return sauceMode === "tabur" ? ["filling_tabur"] : ["filling_celup"];
+    }
+    return [variantId];
+  }
+
+  /** Get price for a given size from the catalog. */
+  function priceForSize(sz: Size): number {
+    const variants = catalogVariantsFor();
+    const row = catalog.find((r) => variants.includes(r.variant) && r.size === sz);
+    if (!row) return 0;
+    return tier === "kuantar" ? row.price_kuantar : row.price_normal;
+  }
+
+  const unitPrice = priceForSize(size);
 
   function buildVariantName(): string {
     const parts: string[] = [];
@@ -95,7 +114,8 @@ export default function CustomizeModal({
       celup: variant.allowsSauce && sauceMode === "celup" ? celup : undefined,
       tabur: variant.allowsSauce && sauceMode === "tabur" ? tabur : undefined,
       quantity: qty,
-      productId: getProductId(
+      productId: getProductIdFromCatalog(
+        catalog,
         variantId,
         size,
         variant.needsFilling ? filling : undefined,
@@ -139,7 +159,7 @@ export default function CustomizeModal({
                     {SIZE_LABEL[sz]}
                   </Text>
                   <Text style={[s.chipSub, size === sz && s.chipTextActive]}>
-                    {formatRp(prices[sz][tier])}
+                    {formatRp(priceForSize(sz))}
                   </Text>
                 </TouchableOpacity>
               ))}

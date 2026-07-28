@@ -1,4 +1,4 @@
-import { fetchCatalog, updateCatalogPrices } from "@/lib/pos-store";
+import { fetchCatalog, invalidateCatalogCache, updateCatalogPrices } from "@/lib/pos-store";
 import type { CatalogItem } from "@/lib/pos-store";
 import { C, R } from "@/lib/theme";
 import { useEffect, useState } from "react";
@@ -33,7 +33,7 @@ export default function PriceManager({ settings, onSave }: Props) {
       try {
         const data = await fetchCatalog(settings.sheetsEndpoint, true);
         setCatalog(data);
-      } catch (error) {
+      } catch {
         Alert.alert("Error", "Failed to load catalog");
       } finally {
         setLoading(false);
@@ -78,9 +78,11 @@ export default function PriceManager({ settings, onSave }: Props) {
 
     if (success) {
       Alert.alert("Berhasil", "Harga diperbarui di Google Sheets");
+      // Update local state and invalidate the in-memory catalog cache
+      // so the POS screen gets fresh prices on next load.
+      invalidateCatalogCache();
       setCatalog(updatedRows);
       setEditedRows({});
-      // Optionally save to local settings as a backup
       onSave({ ...settings });
     } else {
       Alert.alert("Error", "Gagal menyimpan ke Google Sheets");
