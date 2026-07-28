@@ -1,5 +1,8 @@
-import { formatRp } from "@/lib/pos-store";
-import { type CatalogItem, getProductIdFromCatalog } from "@/lib/pos-store";
+import {
+  formatRp,
+  getProductIdFromCatalog,
+  type CatalogItem,
+} from "@/lib/pos-store";
 import {
   CELUPS,
   DEFAULT_PRICES,
@@ -68,7 +71,9 @@ export default function CustomizeModal({
   function priceForSize(sz: Size): number {
     if (catalog.length > 0) {
       const variants = catalogVariantsFor();
-      const row = catalog.find((r) => variants.includes(r.variant) && r.size === sz);
+      const row = catalog.find(
+        (r) => variants.includes(r.variant) && r.size === sz,
+      );
       if (row) return tier === "kuantar" ? row.price_kuantar : row.price_normal;
     }
     // Fallback to DEFAULT_PRICES
@@ -124,7 +129,7 @@ export default function CustomizeModal({
         size,
         variant.needsFilling ? filling : undefined,
         variant.allowsSauce && sauceMode === "celup" ? celup : undefined,
-        variant.allowsSauce && sauceMode === "tabur" ? tabur : undefined
+        variant.allowsSauce && sauceMode === "tabur" ? tabur : undefined,
       ),
     });
   }

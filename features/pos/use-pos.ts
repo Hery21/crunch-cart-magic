@@ -8,8 +8,8 @@ import {
   savePayment,
 } from "@/lib/pos-store";
 import {
-  DEFAULT_PRICES,
   type CartItem,
+  DEFAULT_PRICES,
   type PaymentMethod,
   type PriceTier,
   type Settings,
@@ -27,7 +27,8 @@ export interface PricedCartItem extends CartItem {
 /** Map an app VariantId to one or more catalog variant strings. */
 function toCatalogVariants(variantId: VariantId): string[] {
   if (variantId === "tabur_celup") return ["tabur", "celup"];
-  if (variantId === "filling_tabur_celup") return ["filling_tabur", "filling_celup"];
+  if (variantId === "filling_tabur_celup")
+    return ["filling_tabur", "filling_celup"];
   return [variantId];
 }
 
@@ -40,7 +41,9 @@ function catalogPrice(
 ): number {
   if (catalog.length > 0) {
     const variants = toCatalogVariants(variantId);
-    const row = catalog.find((r) => variants.includes(r.variant) && r.size === size);
+    const row = catalog.find(
+      (r) => variants.includes(r.variant) && r.size === size,
+    );
     if (row) return tier === "kuantar" ? row.price_kuantar : row.price_normal;
   }
   // Fallback to DEFAULT_PRICES when catalog is unavailable

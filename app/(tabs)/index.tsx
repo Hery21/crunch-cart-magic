@@ -11,6 +11,7 @@ import { useClock } from "@/features/pos/use-clock";
 import { usePos } from "@/features/pos/use-pos";
 import {
   formatRp,
+  loadUser,
   nextInvoiceId,
   pushToSheets,
   saveTransaction,
@@ -24,7 +25,6 @@ import { C } from "@/lib/theme";
 import { useState } from "react";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { loadUser } from "@/lib/pos-store";
 
 export default function PosScreen() {
   const clock = useClock();
@@ -46,8 +46,8 @@ export default function PosScreen() {
     setSaving(true);
 
     try {
-    const currentUser = await loadUser();
-    console.log("👤 Current user for order:", currentUser);
+      const currentUser = await loadUser();
+      console.log("👤 Current user for order:", currentUser);
       const items: TransactionItem[] = pos.cartWithPrices.map((i) => ({
         id: i.id,
         variantId: i.variantId,
@@ -69,7 +69,7 @@ export default function PosScreen() {
         grandTotal: pos.grandTotal,
         paymentMethod: pos.paymentMethod,
         priceTier: pos.tier,
-      created_by: currentUser?.display_name || "Unknown",
+        created_by: currentUser?.display_name || "Unknown",
       };
 
       // 1. Save locally
@@ -78,14 +78,23 @@ export default function PosScreen() {
 
       // 2. Push to Google Sheets (if endpoint is configured)
       if (pos.settings?.sheetsEndpoint) {
-        console.log("📤 Attempting to push to sheets:", pos.settings.sheetsEndpoint);
-        const success = await pushToSheets(pos.settings.sheetsEndpoint, tx, pos.catalog);
+        console.log(
+          "📤 Attempting to push to sheets:",
+          pos.settings.sheetsEndpoint,
+        );
+        const success = await pushToSheets(
+          pos.settings.sheetsEndpoint,
+          tx,
+          pos.catalog,
+        );
         if (success) {
           console.log("✅ Sheets push successful");
           showFeedback("Data tersimpan ke Google Sheets");
         } else {
           console.warn("⚠️ Sheets push failed but transaction saved locally");
-          showFeedback("⚠️ Gagal menyimpan ke Google Sheets, tapi data tersimpan lokal");
+          showFeedback(
+            "⚠️ Gagal menyimpan ke Google Sheets, tapi data tersimpan lokal",
+          );
         }
       } else {
         console.log("ℹ️ No sheets endpoint configured – saving locally only");
@@ -97,7 +106,6 @@ export default function PosScreen() {
       setPayOpen(false);
       pos.clearCart();
       setReceipt(tx as Transaction);
-
     } catch (error) {
       console.error("❌ Error during checkout:", error);
       setSaving(false);
@@ -128,7 +136,8 @@ export default function PosScreen() {
       {!!pos.catalogError && pos.catalog.length === 0 && (
         <TouchableOpacity style={s.catalogBanner} onPress={pos.reloadCatalog}>
           <Text style={s.catalogBannerText}>
-            ⚠️ Menggunakan harga default – {pos.catalogError}. Ketuk untuk muat ulang.
+            ⚠️ Menggunakan harga default – {pos.catalogError}. Ketuk untuk muat
+            ulang.
           </Text>
         </TouchableOpacity>
       )}

@@ -1,5 +1,9 @@
-import { fetchCatalog, invalidateCatalogCache, updateCatalogPrices } from "@/lib/pos-store";
 import type { CatalogItem } from "@/lib/pos-store";
+import {
+  fetchCatalog,
+  invalidateCatalogCache,
+  updateCatalogPrices,
+} from "@/lib/pos-store";
 import { C, R } from "@/lib/theme";
 import { useEffect, useState } from "react";
 import {
@@ -23,7 +27,9 @@ export default function PriceManager({ settings, onSave }: Props) {
   const [fetchError, setFetchError] = useState<string | null>(null);
   const [syncing, setSyncing] = useState(false);
   const [catalog, setCatalog] = useState<CatalogItem[]>([]);
-  const [editedRows, setEditedRows] = useState<{ [id: number]: { price_normal: number; price_kuantar: number } }>({});
+  const [editedRows, setEditedRows] = useState<{
+    [id: number]: { price_normal: number; price_kuantar: number };
+  }>({});
 
   const loadCatalog = async (forceRefresh = false) => {
     if (!settings.sheetsEndpoint) {
@@ -50,9 +56,13 @@ export default function PriceManager({ settings, onSave }: Props) {
     loadCatalog(true);
   }, [settings.sheetsEndpoint]);
 
-  const handlePriceChange = (id: number, field: 'price_normal' | 'price_kuantar', value: string) => {
-    const num = Number(value.replace(/\D/g, '')) || 0;
-    setEditedRows(prev => ({
+  const handlePriceChange = (
+    id: number,
+    field: "price_normal" | "price_kuantar",
+    value: string,
+  ) => {
+    const num = Number(value.replace(/\D/g, "")) || 0;
+    setEditedRows((prev) => ({
       ...prev,
       [id]: { ...prev[id], [field]: num },
     }));
@@ -72,16 +82,23 @@ export default function PriceManager({ settings, onSave }: Props) {
       return;
     }
 
-    const updatedRows = catalog.map(row => {
+    const updatedRows = catalog.map((row) => {
       const edits = editedRows[row.id];
       if (edits) {
-        return { ...row, price_normal: edits.price_normal, price_kuantar: edits.price_kuantar };
+        return {
+          ...row,
+          price_normal: edits.price_normal,
+          price_kuantar: edits.price_kuantar,
+        };
       }
       return row;
     });
 
     setSyncing(true);
-    const success = await updateCatalogPrices(settings.sheetsEndpoint, updatedRows);
+    const success = await updateCatalogPrices(
+      settings.sheetsEndpoint,
+      updatedRows,
+    );
     setSyncing(false);
 
     if (success) {
@@ -109,7 +126,9 @@ export default function PriceManager({ settings, onSave }: Props) {
   if (!settings.sheetsEndpoint) {
     return (
       <View style={s.centered}>
-        <Text style={s.emptyText}>Google Sheets endpoint tidak dikonfigurasi.</Text>
+        <Text style={s.emptyText}>
+          Google Sheets endpoint tidak dikonfigurasi.
+        </Text>
         <Text style={s.emptySub}>Atur di Pengaturan terlebih dahulu.</Text>
       </View>
     );
@@ -130,19 +149,21 @@ export default function PriceManager({ settings, onSave }: Props) {
   return (
     <View style={s.container}>
       <Text style={s.title}>Manajemen Harga</Text>
-      <Text style={s.sub}>Edit harga di bawah, lalu simpan ke Google Sheets.</Text>
+      <Text style={s.sub}>
+        Edit harga di bawah, lalu simpan ke Google Sheets.
+      </Text>
       <FlatList
         data={catalog}
-        keyExtractor={item => item.id.toString()}
+        keyExtractor={(item) => item.id.toString()}
         renderItem={({ item }) => {
           const price = getRowPrice(item);
           return (
             <View style={s.row}>
               <Text style={s.rowLabel}>
                 {item.variant} {item.size}
-                {item.filling ? ` • ${item.filling}` : ''}
-                {item.tabur ? ` • ${item.tabur}` : ''}
-                {item.celup ? ` • ${item.celup}` : ''}
+                {item.filling ? ` • ${item.filling}` : ""}
+                {item.tabur ? ` • ${item.tabur}` : ""}
+                {item.celup ? ` • ${item.celup}` : ""}
               </Text>
               <View style={s.priceInputs}>
                 <View style={s.priceGroup}>
@@ -150,16 +171,22 @@ export default function PriceManager({ settings, onSave }: Props) {
                   <TextInput
                     style={s.input}
                     value={String(price.normal)}
-                    onChangeText={(t) => handlePriceChange(item.id, 'price_normal', t)}
+                    onChangeText={(t) =>
+                      handlePriceChange(item.id, "price_normal", t)
+                    }
                     keyboardType="numeric"
                   />
                 </View>
                 <View style={s.priceGroup}>
-                  <Text style={[s.priceLabel, { color: '#9A3412' }]}>Kuantar</Text>
+                  <Text style={[s.priceLabel, { color: "#9A3412" }]}>
+                    Kuantar
+                  </Text>
                   <TextInput
                     style={s.input}
                     value={String(price.kuantar)}
-                    onChangeText={(t) => handlePriceChange(item.id, 'price_kuantar', t)}
+                    onChangeText={(t) =>
+                      handlePriceChange(item.id, "price_kuantar", t)
+                    }
                     keyboardType="numeric"
                   />
                 </View>
@@ -170,8 +197,14 @@ export default function PriceManager({ settings, onSave }: Props) {
         contentContainerStyle={s.listContent}
         showsVerticalScrollIndicator={false}
       />
-      <TouchableOpacity style={s.saveBtn} onPress={handleSave} disabled={syncing}>
-        <Text style={s.saveBtnText}>{syncing ? "Menyimpan..." : "Simpan ke Sheets"}</Text>
+      <TouchableOpacity
+        style={s.saveBtn}
+        onPress={handleSave}
+        disabled={syncing}
+      >
+        <Text style={s.saveBtnText}>
+          {syncing ? "Menyimpan..." : "Simpan ke Sheets"}
+        </Text>
       </TouchableOpacity>
     </View>
   );
@@ -179,14 +212,45 @@ export default function PriceManager({ settings, onSave }: Props) {
 
 const s = StyleSheet.create({
   container: { flex: 1, padding: 16 },
-  centered: { flex: 1, justifyContent: 'center', alignItems: 'center', gap: 12, padding: 24 },
-  loadingText: { fontFamily: 'Poppins_400Regular', fontSize: 14, color: C.mutedFg },
-  emptyText: { fontFamily: 'Poppins_600SemiBold', fontSize: 16, color: C.foreground, textAlign: 'center' },
-  emptySub: { fontFamily: 'Poppins_400Regular', fontSize: 13, color: C.mutedFg, textAlign: 'center' },
-  retryBtn: { backgroundColor: C.primary, borderRadius: R.xl, paddingHorizontal: 20, paddingVertical: 10, marginTop: 8 },
-  retryBtnText: { fontFamily: 'Poppins_700Bold', fontSize: 14, color: '#fff' },
-  title: { fontFamily: 'Poppins_700Bold', fontSize: 18, color: C.foreground },
-  sub: { fontFamily: 'Poppins_400Regular', fontSize: 13, color: C.mutedFg, marginBottom: 12 },
+  centered: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    gap: 12,
+    padding: 24,
+  },
+  loadingText: {
+    fontFamily: "Poppins_400Regular",
+    fontSize: 14,
+    color: C.mutedFg,
+  },
+  emptyText: {
+    fontFamily: "Poppins_600SemiBold",
+    fontSize: 16,
+    color: C.foreground,
+    textAlign: "center",
+  },
+  emptySub: {
+    fontFamily: "Poppins_400Regular",
+    fontSize: 13,
+    color: C.mutedFg,
+    textAlign: "center",
+  },
+  retryBtn: {
+    backgroundColor: C.primary,
+    borderRadius: R.xl,
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    marginTop: 8,
+  },
+  retryBtnText: { fontFamily: "Poppins_700Bold", fontSize: 14, color: "#fff" },
+  title: { fontFamily: "Poppins_700Bold", fontSize: 18, color: C.foreground },
+  sub: {
+    fontFamily: "Poppins_400Regular",
+    fontSize: 13,
+    color: C.mutedFg,
+    marginBottom: 12,
+  },
   listContent: { gap: 8, paddingBottom: 12 },
   row: {
     borderWidth: 1,
@@ -196,23 +260,23 @@ const s = StyleSheet.create({
     backgroundColor: C.card,
   },
   rowLabel: {
-    fontFamily: 'Poppins_500Medium',
+    fontFamily: "Poppins_500Medium",
     fontSize: 12,
     color: C.foreground,
     marginBottom: 4,
   },
   priceInputs: {
-    flexDirection: 'row',
+    flexDirection: "row",
     gap: 12,
   },
   priceGroup: {
     flex: 1,
   },
   priceLabel: {
-    fontFamily: 'Poppins_600SemiBold',
+    fontFamily: "Poppins_600SemiBold",
     fontSize: 10,
-    textTransform: 'uppercase',
-    color: '#065F46',
+    textTransform: "uppercase",
+    color: "#065F46",
     marginBottom: 2,
   },
   input: {
@@ -221,7 +285,7 @@ const s = StyleSheet.create({
     borderRadius: R.md,
     paddingVertical: 4,
     paddingHorizontal: 8,
-    fontFamily: 'Poppins_400Regular',
+    fontFamily: "Poppins_400Regular",
     fontSize: 14,
     color: C.foreground,
     backgroundColor: C.background,
@@ -230,11 +294,11 @@ const s = StyleSheet.create({
     backgroundColor: C.primary,
     borderRadius: R.xl,
     paddingVertical: 12,
-    alignItems: 'center',
+    alignItems: "center",
     marginTop: 12,
   },
   saveBtnText: {
-    fontFamily: 'Poppins_700Bold',
+    fontFamily: "Poppins_700Bold",
     fontSize: 15,
     color: C.primaryFg,
   },
