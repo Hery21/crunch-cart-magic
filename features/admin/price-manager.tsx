@@ -20,26 +20,34 @@ interface Props {
 
 export default function PriceManager({ settings, onSave }: Props) {
   const [loading, setLoading] = useState(true);
+  const [fetchError, setFetchError] = useState<string | null>(null);
   const [syncing, setSyncing] = useState(false);
   const [catalog, setCatalog] = useState<CatalogItem[]>([]);
   const [editedRows, setEditedRows] = useState<{ [id: number]: { price_normal: number; price_kuantar: number } }>({});
 
-  useEffect(() => {
-    const load = async () => {
-      if (!settings.sheetsEndpoint) {
-        setLoading(false);
-        return;
-      }
-      try {
-        const data = await fetchCatalog(settings.sheetsEndpoint, true);
+  const loadCatalog = async (forceRefresh = false) => {
+    if (!settings.sheetsEndpoint) {
+      setLoading(false);
+      return;
+    }
+    setLoading(true);
+    setFetchError(null);
+    try {
+      const data = await fetchCatalog(settings.sheetsEndpoint, forceRefresh);
+      if (data.length > 0) {
         setCatalog(data);
-      } catch {
-        Alert.alert("Error", "Failed to load catalog");
-      } finally {
-        setLoading(false);
+      } else {
+        setFetchError("Katalog kosong atau gagal dimuat dari Google Sheets.");
       }
-    };
-    load();
+    } catch {
+      setFetchError("Gagal menghubungi Google Sheets.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadCatalog(true);
   }, [settings.sheetsEndpoint]);
 
   const handlePriceChange = (id: number, field: 'price_normal' | 'price_kuantar', value: string) => {
@@ -107,6 +115,18 @@ export default function PriceManager({ settings, onSave }: Props) {
     );
   }
 
+  if (fetchError || catalog.length === 0) {
+    return (
+      <View style={s.centered}>
+        <Text style={s.emptyText}>Gagal memuat katalog</Text>
+        <Text style={s.emptySub}>{fetchError ?? "Katalog kosong."}</Text>
+        <TouchableOpacity style={s.retryBtn} onPress={() => loadCatalog(true)}>
+          <Text style={s.retryBtnText}>Coba Lagi</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
+
   return (
     <View style={s.container}>
       <Text style={s.title}>Manajemen Harga</Text>
@@ -163,6 +183,8 @@ const s = StyleSheet.create({
   loadingText: { fontFamily: 'Poppins_400Regular', fontSize: 14, color: C.mutedFg },
   emptyText: { fontFamily: 'Poppins_600SemiBold', fontSize: 16, color: C.foreground, textAlign: 'center' },
   emptySub: { fontFamily: 'Poppins_400Regular', fontSize: 13, color: C.mutedFg, textAlign: 'center' },
+  retryBtn: { backgroundColor: C.primary, borderRadius: R.xl, paddingHorizontal: 20, paddingVertical: 10, marginTop: 8 },
+  retryBtnText: { fontFamily: 'Poppins_700Bold', fontSize: 14, color: '#fff' },
   title: { fontFamily: 'Poppins_700Bold', fontSize: 18, color: C.foreground },
   sub: { fontFamily: 'Poppins_400Regular', fontSize: 13, color: C.mutedFg, marginBottom: 12 },
   listContent: { gap: 8, paddingBottom: 12 },

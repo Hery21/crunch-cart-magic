@@ -117,26 +117,20 @@ export default function PosScreen() {
     );
   }
 
-  if (pos.catalogError && pos.catalog.length === 0) {
-    return (
-      <View style={s.loading}>
-        <Text style={s.loadingText}>{pos.catalogError}</Text>
-        <TouchableOpacity
-          style={{ marginTop: 12, paddingHorizontal: 20, paddingVertical: 10, backgroundColor: C.primary, borderRadius: 999 }}
-          onPress={pos.reloadCatalog}
-        >
-          <Text style={{ color: "#fff", fontFamily: "Poppins_600SemiBold" }}>Coba Lagi</Text>
-        </TouchableOpacity>
-      </View>
-    );
-  }
-
   return (
     <SafeAreaView style={s.root} edges={["top"]}>
       {!!feedback && (
         <View style={s.toast} pointerEvents="none">
           <Text style={s.toastText}>{feedback}</Text>
         </View>
+      )}
+
+      {!!pos.catalogError && pos.catalog.length === 0 && (
+        <TouchableOpacity style={s.catalogBanner} onPress={pos.reloadCatalog}>
+          <Text style={s.catalogBannerText}>
+            ⚠️ Menggunakan harga default – {pos.catalogError}. Ketuk untuk muat ulang.
+          </Text>
+        </TouchableOpacity>
       )}
 
       <PosHeader
@@ -227,6 +221,17 @@ const s = StyleSheet.create({
     backgroundColor: C.background,
   },
   loadingText: { fontFamily: "Poppins_500Medium", color: C.mutedFg },
+  catalogBanner: {
+    backgroundColor: "#7C2D12",
+    paddingHorizontal: 14,
+    paddingVertical: 7,
+  },
+  catalogBannerText: {
+    fontFamily: "Poppins_500Medium",
+    fontSize: 11,
+    color: "#FEF3C7",
+    textAlign: "center",
+  },
   toast: {
     position: "absolute",
     top: 80,

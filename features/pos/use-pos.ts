@@ -8,6 +8,7 @@ import {
   savePayment,
 } from "@/lib/pos-store";
 import {
+  DEFAULT_PRICES,
   type CartItem,
   type PaymentMethod,
   type PriceTier,
@@ -30,17 +31,20 @@ function toCatalogVariants(variantId: VariantId): string[] {
   return [variantId];
 }
 
-/** Look up the price for a variant+size from the catalog. */
+/** Look up the price for a variant+size from the catalog, falling back to DEFAULT_PRICES. */
 function catalogPrice(
   catalog: CatalogItem[],
   variantId: VariantId,
   size: Size,
   tier: PriceTier,
 ): number {
-  const variants = toCatalogVariants(variantId);
-  const row = catalog.find((r) => variants.includes(r.variant) && r.size === size);
-  if (!row) return 0;
-  return tier === "kuantar" ? row.price_kuantar : row.price_normal;
+  if (catalog.length > 0) {
+    const variants = toCatalogVariants(variantId);
+    const row = catalog.find((r) => variants.includes(r.variant) && r.size === size);
+    if (row) return tier === "kuantar" ? row.price_kuantar : row.price_normal;
+  }
+  // Fallback to DEFAULT_PRICES when catalog is unavailable
+  return DEFAULT_PRICES[variantId]?.[size]?.[tier] ?? 0;
 }
 
 export function usePos() {

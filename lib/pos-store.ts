@@ -64,7 +64,7 @@ const TX_KEY = "ccr.transactions";
 const CART_KEY = "ccr.cart";
 const PAY_KEY = "ccr.payment";
 const USER_KEY = "ccr.user";
-const CATALOG_KEY = "ccr.catalog";
+const CATALOG_KEY = "ccr.product_catalog";
 
 const memoryStore = new Map<string, string>();
 let useMemoryFallback = false;
@@ -285,7 +285,13 @@ export async function fetchCatalog(
     const cached = await safeGetItem(CATALOG_KEY);
     if (!forceRefresh && cached) {
       const parsed = JSON.parse(cached);
-      if (Array.isArray(parsed) && parsed.length > 0) {
+      // Validate it's actual catalog data (must have variant + price_normal fields)
+      if (
+        Array.isArray(parsed) &&
+        parsed.length > 0 &&
+        "variant" in parsed[0] &&
+        "price_normal" in parsed[0]
+      ) {
         catalogCache = parsed;
         return parsed;
       }
@@ -300,7 +306,9 @@ export async function fetchCatalog(
     const response = await fetch(url);
     if (!response.ok) return [];
     const data = await response.json();
-    if (data.error) return [];
+    if (!Array.isArray(data) || data.length === 0) return [];
+    // Validate the response is actually catalog data
+    if (!("variant" in data[0]) || !("price_normal" in data[0])) return [];
 
     // Cache the result
     catalogCache = data;

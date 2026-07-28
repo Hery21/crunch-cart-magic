@@ -2,6 +2,7 @@ import { formatRp } from "@/lib/pos-store";
 import { type CatalogItem, getProductIdFromCatalog } from "@/lib/pos-store";
 import {
   CELUPS,
+  DEFAULT_PRICES,
   FILLINGS,
   SIZES,
   SIZE_LABEL,
@@ -63,12 +64,15 @@ export default function CustomizeModal({
     return [variantId];
   }
 
-  /** Get price for a given size from the catalog. */
+  /** Get price for a given size from the catalog, falling back to DEFAULT_PRICES. */
   function priceForSize(sz: Size): number {
-    const variants = catalogVariantsFor();
-    const row = catalog.find((r) => variants.includes(r.variant) && r.size === sz);
-    if (!row) return 0;
-    return tier === "kuantar" ? row.price_kuantar : row.price_normal;
+    if (catalog.length > 0) {
+      const variants = catalogVariantsFor();
+      const row = catalog.find((r) => variants.includes(r.variant) && r.size === sz);
+      if (row) return tier === "kuantar" ? row.price_kuantar : row.price_normal;
+    }
+    // Fallback to DEFAULT_PRICES
+    return DEFAULT_PRICES[variantId]?.[sz]?.[tier] ?? 0;
   }
 
   const unitPrice = priceForSize(size);
