@@ -31,7 +31,7 @@ export default function LoginScreen() {
       // 2. Load settings and fetch users
       const settings = await loadSettings();
       const url = settings.sheetsEndpoint?.trim();
-      console.log("url", url)
+      console.log("url", url);
       if (!url) {
         setLoading(false);
         setError(`No Google Sheets endpoint configured. ${url}`);
@@ -54,13 +54,15 @@ export default function LoginScreen() {
       }));
       setUsers(normalized);
     } catch (err: any) {
-      setError(`${err.message} ${url}` || "Failed to load users.");
+      setError(`${err.message}` || "Failed to load users.");
     } finally {
       setLoading(false);
     }
   };
 
-  useEffect(() => { init(); }, []);
+  useEffect(() => {
+    init();
+  }, []);
 
   const handleLogin = async () => {
     if (pin.length !== 4) {
@@ -99,7 +101,14 @@ export default function LoginScreen() {
         <View style={s.container}>
           <Text style={s.title}>Connection Error</Text>
           <Text style={[s.sub, { color: C.destructive }]}>{error}</Text>
-          <TouchableOpacity style={s.loginBtn} onPress={() => { setError(null); setLoading(true); init(); }}>
+          <TouchableOpacity
+            style={s.loginBtn}
+            onPress={() => {
+              setError(null);
+              setLoading(true);
+              init();
+            }}
+          >
             <Text style={s.loginBtnText}>Retry</Text>
           </TouchableOpacity>
         </View>
@@ -135,8 +144,19 @@ const s = StyleSheet.create({
   root: { flex: 1, backgroundColor: C.background },
   container: { flex: 1, justifyContent: "center", padding: 24 },
   center: { flex: 1, justifyContent: "center", alignItems: "center" },
-  title: { fontFamily: "Poppins_800ExtraBold", fontSize: 28, color: C.foreground, textAlign: "center" },
-  sub: { fontFamily: "Poppins_400Regular", fontSize: 13, color: C.mutedFg, textAlign: "center", marginBottom: 24 },
+  title: {
+    fontFamily: "Poppins_800ExtraBold",
+    fontSize: 28,
+    color: C.foreground,
+    textAlign: "center",
+  },
+  sub: {
+    fontFamily: "Poppins_400Regular",
+    fontSize: 13,
+    color: C.mutedFg,
+    textAlign: "center",
+    marginBottom: 24,
+  },
   pinInput: {
     width: "100%",
     borderWidth: 1,
@@ -159,5 +179,9 @@ const s = StyleSheet.create({
     paddingVertical: 14,
     alignItems: "center",
   },
-  loginBtnText: { fontFamily: "Poppins_700Bold", fontSize: 15, color: C.primaryFg },
+  loginBtnText: {
+    fontFamily: "Poppins_700Bold",
+    fontSize: 15,
+    color: C.primaryFg,
+  },
 });
