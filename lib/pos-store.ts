@@ -1,5 +1,4 @@
 import { Platform } from "react-native";
-
 // ─── Imports ───────────────────────────────────────────────────────────────
 import {
   DEFAULT_PRICES,
@@ -11,7 +10,6 @@ import {
 
 // ─── AsyncStorage polyfill ──────────────────────────────────────────────
 let AsyncStorage: typeof import("@react-native-async-storage/async-storage").default;
-
 if (Platform.OS === "web") {
   AsyncStorage = {
     getItem: async (key: string) => {
@@ -104,6 +102,35 @@ async function safeSetItem(key: string, value: string): Promise<void> {
   }
 }
 
+// ─── URL helper (SINGLE SOURCE OF TRUTH for building GET URLs) ─────────────
+/**
+ * Builds a GET URL from the base endpoint by appending query params.
+ * IMPORTANT: This does NOT change the base/host of `endpoint`. It only appends
+ * a query string. Any `script.googleusercontent.com/macros/echo` URL you see in
+ * the console is Google's *own* redirect target for serving GET output — it is
+ * NOT produced here.
+ *
+ * @param endpoint  The exact web-app URL (…/exec). Must be identical to the one
+ *                  used by pushToSheets().
+ * @param params    Query params to append (e.g. { type: "catalog" }).
+ * @param cacheBust When true, appends a timestamp to defeat CDN/proxy caching.
+ */
+function buildGetUrl(
+  endpoint: string,
+  params: Record<string, string>,
+  cacheBust = true,
+): string {
+  const trimmed = (endpoint ?? "").trim();
+  const all: Record<string, string> = { ...params };
+  if (cacheBust) all._t = String(Date.now());
+
+  const qs = Object.entries(all)
+    .map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(v)}`)
+    .join("&");
+
+  return trimmed.includes("?") ? `${trimmed}&${qs}` : `${trimmed}?${qs}`;
+}
+
 // ─── Settings ─────────────────────────────────────────────────────────────
 export async function loadSettings(): Promise<Settings> {
   try {
@@ -138,18 +165,26 @@ export async function loadSettings(): Promise<Settings> {
         migrated[k] = DEFAULT_PRICES[k];
       }
     }
-    return {
+    const merged: Settings = {
       ...DEFAULT_SETTINGS,
       ...parsed,
       prices: migrated as Settings["prices"],
     };
+    // Normalize the endpoint so GET and POST are guaranteed identical.
+    merged.sheetsEndpoint = (merged.sheetsEndpoint ?? "").trim();
+    return merged;
   } catch {
     return DEFAULT_SETTINGS;
   }
 }
 
 export async function saveSettings(s: Settings): Promise<void> {
-  await safeSetItem(SETTINGS_KEY, JSON.stringify(s));
+  // Trim on save too, so we never persist stray whitespace/newlines.
+  const clean: Settings = {
+    ...s,
+    sheetsEndpoint: (s.sheetsEndpoint ?? "").trim(),
+  };
+  await safeSetItem(SETTINGS_KEY, JSON.stringify(clean));
 }
 
 // ─── Transactions ─────────────────────────────────────────────────────────
@@ -247,7 +282,6 @@ export async function nextInvoiceId(): Promise<string> {
 }
 
 // ─── Catalog (Single Source of Truth) ────────────────────────────────────
-
 /** A single row from the product_variants sheet */
 export interface CatalogItem {
   id: number;
@@ -275,17 +309,29 @@ export async function fetchCatalog(
   endpoint: string,
   forceRefresh = false,
 ): Promise<CatalogItem[]> {
-  if (!endpoint) return [];
+  // ── DEBUG: log the raw endpoint so we can compare with pushToSheets ──
+  console.log("🟦 [fetchCatalog] endpoint arg:", JSON.stringify(endpoint));
+  console.log("🟦 [fetchCatalog] forceRefresh:", forceRefresh);
+
+  if (!endpoint) {
+    console.warn("🟥 [fetchCatalog] Empty endpoint — returning []");
+    return [];
+  }
 
   // Check memory cache
-  if (!forceRefresh && catalogCache) return catalogCache;
+  if (!forceRefresh && catalogCache) {
+    console.log(
+      "🟩 [fetchCatalog] returning MEMORY cache",
+      catalogCache.length,
+    );
+    return catalogCache;
+  }
 
   // Check AsyncStorage cache
   try {
     const cached = await safeGetItem(CATALOG_KEY);
     if (!forceRefresh && cached) {
       const parsed = JSON.parse(cached);
-      // Validate it's actual catalog data (must have variant + price_normal fields)
       if (
         Array.isArray(parsed) &&
         parsed.length > 0 &&
@@ -293,6 +339,10 @@ export async function fetchCatalog(
         "price_normal" in parsed[0]
       ) {
         catalogCache = parsed;
+        console.log(
+          "🟩 [fetchCatalog] returning ASYNCSTORAGE cache",
+          parsed.length,
+        );
         return parsed;
       }
     }
@@ -300,22 +350,75 @@ export async function fetchCatalog(
 
   // Fetch from network
   try {
-    const url = endpoint.includes("?")
-      ? `${endpoint}&type=catalog`
-      : `${endpoint}?type=catalog`;
-    const response = await fetch(url);
-    if (!response.ok) return [];
-    const data = await response.json();
-    if (!Array.isArray(data) || data.length === 0) return [];
-    // Validate the response is actually catalog data
-    if (!("variant" in data[0]) || !("price_normal" in data[0])) return [];
+    // Built via the SAME helper, from the SAME endpoint string.
+    const url = buildGetUrl(endpoint, { type: "catalog" });
 
-    // Cache the result
+    console.log("🟦 [fetchCatalog] FINAL GET url:", url);
+
+    const response = await fetch(url, {
+      method: "GET",
+      // Follow Google's 302 redirect to script.googleusercontent.com.
+      redirect: "follow",
+      // Helps some proxies/CDNs avoid returning a stale 404/redirect.
+      headers: { "Cache-Control": "no-cache" },
+    });
+
+    // ── DEBUG: log exactly what came back, including the FINAL (redirected) URL ──
+    console.log(
+      "🟦 [fetchCatalog] response.status:",
+      response.status,
+      "| response.ok:",
+      response.ok,
+      "| final url:",
+      response.url, // <-- this will show the googleusercontent echo URL
+      "| redirected:",
+      (response as any).redirected,
+    );
+
+    if (!response.ok) {
+      const text = await response.text().catch(() => "<no body>");
+      console.error(
+        "🟥 [fetchCatalog] HTTP not OK:",
+        response.status,
+        "body:",
+        text.slice(0, 500),
+      );
+      return [];
+    }
+
+    const raw = await response.text();
+    let data: any;
+    try {
+      data = JSON.parse(raw);
+    } catch {
+      // If doGet returned HTML (login page / error page) instead of JSON,
+      // this is where you'll catch it. Log the first chunk to diagnose.
+      console.error(
+        "🟥 [fetchCatalog] Response was not JSON. First 500 chars:",
+        raw.slice(0, 500),
+      );
+      return [];
+    }
+
+    if (!Array.isArray(data) || data.length === 0) {
+      console.warn("🟨 [fetchCatalog] Empty / non-array payload:", data);
+      return [];
+    }
+
+    if (!("variant" in data[0]) || !("price_normal" in data[0])) {
+      console.warn(
+        "🟨 [fetchCatalog] Payload shape unexpected (missing variant/price_normal):",
+        data[0],
+      );
+      return [];
+    }
+
     catalogCache = data;
     await safeSetItem(CATALOG_KEY, JSON.stringify(data));
+    console.log("🟩 [fetchCatalog] NETWORK success, rows:", data.length);
     return data;
   } catch (error) {
-    console.error("Failed to fetch catalog:", error);
+    console.error("🟥 [fetchCatalog] Failed to fetch catalog:", error);
     return [];
   }
 }
@@ -332,7 +435,6 @@ export function getProductIdFromCatalog(
   celup?: string,
   tabur?: string,
 ): number {
-  // Handle alias variants (tabur_celup -> tabur or celup)
   let actualVariant = variantId;
   if (variantId === "tabur_celup") {
     if (tabur) actualVariant = "tabur";
@@ -342,7 +444,6 @@ export function getProductIdFromCatalog(
     else if (celup) actualVariant = "filling_celup";
   }
 
-  // Normalize empty strings to undefined for matching
   const matchFilling = filling || undefined;
   const matchCelup = celup || undefined;
   const matchTabur = tabur || undefined;
@@ -401,8 +502,6 @@ export function getProductId(
   celup?: string,
   tabur?: string,
 ): number {
-  // This is a fallback – you should migrate to using the catalog.
-  // The hardcoded map is removed to force migration.
   console.warn(
     "⚠️ getProductId() is deprecated. Use getProductIdFromCatalog() with a fetched catalog.",
   );
@@ -410,7 +509,6 @@ export function getProductId(
 }
 
 // ─── Push to Sheets ──────────────────────────────────────────────────────
-
 /**
  * Pushes a completed transaction to Google Sheets.
  * Uses the catalog to resolve product IDs.
@@ -418,12 +516,13 @@ export function getProductId(
 export async function pushToSheets(
   endpoint: string,
   tx: Omit<Transaction, "id" | "order_number"> & { created_by: string },
-  catalog?: CatalogItem[], // optional – if not provided, fetches it
+  catalog?: CatalogItem[],
 ): Promise<string | null> {
-  if (!endpoint) return null;
+  // ── DEBUG: log the endpoint so we can compare it with fetchCatalog ──
+  console.log("🟪 [pushToSheets] endpoint arg:", JSON.stringify(endpoint));
 
+  if (!endpoint) return null;
   try {
-    // Ensure we have a catalog
     let catalogData = catalog || catalogCache;
     if (!catalogData) {
       catalogData = await fetchCatalog(endpoint);
@@ -468,17 +567,17 @@ export async function pushToSheets(
     const formData = new URLSearchParams();
     formData.append("payload", JSON.stringify(payload));
 
-    const response = await fetch(endpoint, {
+    const response = await fetch(endpoint.trim(), {
       method: "POST",
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
       body: formData.toString(),
+      redirect: "follow",
     });
 
     if (!response.ok) {
       console.warn("Sheets response not OK:", response.status);
       return null;
     }
-
     const result = await response.json();
     return result.orderNumber || null;
   } catch (error) {
@@ -493,7 +592,6 @@ export function formatRp(n: number): string {
 }
 
 // ─── Sheets Fetch/Update (for PriceManager) ────────────────────────────
-
 export async function updateCatalogPrices(
   endpoint: string,
   rows: any[],
@@ -503,15 +601,16 @@ export async function updateCatalogPrices(
     const payload = { type: "update_prices", prices: rows };
     const formData = new URLSearchParams();
     formData.append("payload", JSON.stringify(payload));
-    const response = await fetch(endpoint, {
+
+    const response = await fetch(endpoint.trim(), {
       method: "POST",
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
       body: formData.toString(),
+      redirect: "follow",
     });
     if (!response.ok) return false;
     const result = await response.json();
     if (result.success === true) {
-      // Invalidate cache so next fetch gets fresh data
       invalidateCatalogCache();
       await safeSetItem(CATALOG_KEY, JSON.stringify(rows));
     }
@@ -527,10 +626,12 @@ export async function fetchTransactionsFromSheets(
 ): Promise<Transaction[]> {
   if (!endpoint) return [];
   try {
-    const url = endpoint.includes("?")
-      ? `${endpoint}&type=transactions`
-      : `${endpoint}?type=transactions`;
-    const response = await fetch(url);
+    const url = buildGetUrl(endpoint, { type: "transactions" });
+    const response = await fetch(url, {
+      method: "GET",
+      redirect: "follow",
+      headers: { "Cache-Control": "no-cache" },
+    });
     if (!response.ok) return [];
     const data = await response.json();
     if (data.error) return [];
