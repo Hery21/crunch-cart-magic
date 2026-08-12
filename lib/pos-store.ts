@@ -358,9 +358,11 @@ export async function fetchCatalog(
     const response = await fetch(url, {
       method: "GET",
       // Follow Google's 302 redirect to script.googleusercontent.com.
+      // Note: No custom headers here — adding any non-simple header (e.g.
+      // Cache-Control) triggers a CORS preflight OPTIONS that Google Apps
+      // Script does not handle, causing ERR_FAILED on web.
+      // Cache-busting is handled by the _t timestamp in the URL instead.
       redirect: "follow",
-      // Helps some proxies/CDNs avoid returning a stale 404/redirect.
-      headers: { "Cache-Control": "no-cache" },
     });
 
     // ── DEBUG: log exactly what came back, including the FINAL (redirected) URL ──
@@ -630,7 +632,6 @@ export async function fetchTransactionsFromSheets(
     const response = await fetch(url, {
       method: "GET",
       redirect: "follow",
-      headers: { "Cache-Control": "no-cache" },
     });
     if (!response.ok) return [];
     const data = await response.json();
