@@ -40,10 +40,22 @@ export default function LoginScreen() {
 
       const controller = new AbortController();
       const timeout = setTimeout(() => controller.abort(), 10000);
-      const response = await fetch(url, { signal: controller.signal });
+
+      let response: Response | null = null;
+      for (let attempt = 1; attempt <= 3; attempt++) {
+        try {
+          response = await fetch(url, { signal: controller.signal });
+          if (response.ok) break;
+          console.warn(`[login] attempt ${attempt} HTTP ${response.status}`);
+        } catch (e) {
+          console.warn(`[login] attempt ${attempt} threw:`, e);
+        }
+        if (attempt < 3) await new Promise((r) => setTimeout(r, 1200 * attempt));
+      }
       clearTimeout(timeout);
 
-      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      if (!response || !response.ok)
+        throw new Error(`HTTP ${response?.status ?? "network error"}`);
       const data = await response.json();
       if (data.error) throw new Error(data.error);
 

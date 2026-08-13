@@ -131,6 +131,39 @@ function buildGetUrl(
   return trimmed.includes("?") ? `${trimmed}&${qs}` : `${trimmed}?${qs}`;
 }
 
+// ─── GAS retry helper ────────────────────────────────────────────────────────
+/**
+ * Calls `fetcher` up to GAS_MAX_ATTEMPTS times, waiting GAS_RETRY_DELAY_MS *
+ * attempt between retries. Handles both network errors and non-OK HTTP statuses.
+ * Returns null when all attempts fail.
+ *
+ * NOTE: Only use this for idempotent requests (GET, or PUT/POST that are safe
+ * to repeat). Do NOT use for pushToSheets order submission — that would create
+ * duplicate orders.
+ */
+const GAS_MAX_ATTEMPTS = 3;
+const GAS_RETRY_DELAY_MS = 1200;
+
+async function gasWithRetry(
+  fetcher: () => Promise<Response>,
+  label: string,
+): Promise<Response | null> {
+  for (let attempt = 1; attempt <= GAS_MAX_ATTEMPTS; attempt++) {
+    try {
+      const response = await fetcher();
+      if (response.ok) return response;
+      console.warn(`[${label}] attempt ${attempt}/${GAS_MAX_ATTEMPTS} HTTP ${response.status}`);
+    } catch (error) {
+      console.warn(`[${label}] attempt ${attempt}/${GAS_MAX_ATTEMPTS} threw:`, error);
+    }
+    if (attempt < GAS_MAX_ATTEMPTS) {
+      await new Promise((r) => setTimeout(r, GAS_RETRY_DELAY_MS * attempt));
+    }
+  }
+  console.error(`[${label}] all attempts failed`);
+  return null;
+}
+
 // ─── Settings ─────────────────────────────────────────────────────────────
 export async function loadSettings(): Promise<Settings> {
   try {
@@ -329,78 +362,34 @@ export async function fetchCatalog(
 
   // No localStorage cache for catalog — prices must be fresh on every page load.
 
-  // Fetch from network with retry (GAS cold starts can fail on first attempt).
   const url = buildGetUrl(endpoint, { type: "catalog" });
-  const MAX_ATTEMPTS = 3;
-  const RETRY_DELAY_MS = 1200;
+  const response = await gasWithRetry(
+    () => fetch(url, { method: "GET", redirect: "follow" }),
+    "fetchCatalog",
+  );
+  if (!response) return [];
 
-  for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
-    try {
-      console.log(`🟦 [fetchCatalog] attempt ${attempt}/${MAX_ATTEMPTS} url:`, url);
-
-      const response = await fetch(url, {
-        method: "GET",
-        // No custom headers — any non-simple header triggers a CORS preflight
-        // that Google Apps Script does not handle. Cache-busting is via _t param.
-        redirect: "follow",
-      });
-
-      if (!response.ok) {
-        console.warn(`🟨 [fetchCatalog] attempt ${attempt} HTTP ${response.status}`);
-        if (attempt < MAX_ATTEMPTS) {
-          await new Promise((r) => setTimeout(r, RETRY_DELAY_MS * attempt));
-          continue;
-        }
-        return [];
-      }
-
-      const raw = await response.text();
-      let data: any;
-      try {
-        data = JSON.parse(raw);
-      } catch {
-        console.warn(`🟨 [fetchCatalog] attempt ${attempt} non-JSON response`);
-        if (attempt < MAX_ATTEMPTS) {
-          await new Promise((r) => setTimeout(r, RETRY_DELAY_MS * attempt));
-          continue;
-        }
-        return [];
-      }
-
-      if (!Array.isArray(data) || data.length === 0) {
-        console.warn(`🟨 [fetchCatalog] attempt ${attempt} empty/non-array payload`);
-        if (attempt < MAX_ATTEMPTS) {
-          await new Promise((r) => setTimeout(r, RETRY_DELAY_MS * attempt));
-          continue;
-        }
-        return [];
-      }
-
-      if (!("variant" in data[0]) || !("price_normal" in data[0])) {
-        console.warn(
-          `🟨 [fetchCatalog] attempt ${attempt} unexpected shape:`,
-          data[0],
-        );
-        if (attempt < MAX_ATTEMPTS) {
-          await new Promise((r) => setTimeout(r, RETRY_DELAY_MS * attempt));
-          continue;
-        }
-        return [];
-      }
-
-      catalogCache = data;
-      console.log("🟩 [fetchCatalog] success on attempt", attempt, "rows:", data.length);
-      return data;
-    } catch (error) {
-      console.warn(`🟨 [fetchCatalog] attempt ${attempt} threw:`, error);
-      if (attempt < MAX_ATTEMPTS) {
-        await new Promise((r) => setTimeout(r, RETRY_DELAY_MS * attempt));
-      }
-    }
+  let data: any;
+  try {
+    data = await response.json();
+  } catch {
+    console.error("🟥 [fetchCatalog] response was not JSON");
+    return [];
   }
 
-  console.error("🟥 [fetchCatalog] all attempts failed");
-  return [];
+  if (!Array.isArray(data) || data.length === 0) {
+    console.warn("🟨 [fetchCatalog] empty or non-array payload:", data);
+    return [];
+  }
+
+  if (!("variant" in data[0]) || !("price_normal" in data[0])) {
+    console.warn("🟨 [fetchCatalog] unexpected shape:", data[0]);
+    return [];
+  }
+
+  catalogCache = data;
+  console.log("🟩 [fetchCatalog] success, rows:", data.length);
+  return data;
 }
 
 /**
@@ -582,17 +571,19 @@ export async function updateCatalogPrices(
     const formData = new URLSearchParams();
     formData.append("payload", JSON.stringify(payload));
 
-    const response = await fetch(endpoint.trim(), {
-      method: "POST",
-      headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      body: formData.toString(),
-      redirect: "follow",
-    });
-    if (!response.ok) return false;
+    const response = await gasWithRetry(
+      () => fetch(endpoint.trim(), {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: formData.toString(),
+        redirect: "follow",
+      }),
+      "updateCatalogPrices",
+    );
+    if (!response) return false;
     const result = await response.json();
     if (result.success === true) {
       invalidateCatalogCache();
-      await safeSetItem(CATALOG_KEY, JSON.stringify(rows));
     }
     return result.success === true;
   } catch (error) {
@@ -607,11 +598,11 @@ export async function fetchTransactionsFromSheets(
   if (!endpoint) return [];
   try {
     const url = buildGetUrl(endpoint, { type: "transactions" });
-    const response = await fetch(url, {
-      method: "GET",
-      redirect: "follow",
-    });
-    if (!response.ok) return [];
+    const response = await gasWithRetry(
+      () => fetch(url, { method: "GET", redirect: "follow" }),
+      "fetchTransactions",
+    );
+    if (!response) return [];
     const data = await response.json();
     if (data.error) return [];
     return data;
