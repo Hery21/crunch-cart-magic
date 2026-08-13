@@ -303,7 +303,7 @@ export function invalidateCatalogCache(): void {
 
 /**
  * Fetches the catalog from Google Sheets.
- * Caches the result in memory and AsyncStorage.
+ * Caches in memory only (no localStorage) so prices reflect sheet changes on every fresh page load.
  */
 export async function fetchCatalog(
   endpoint: string,
@@ -327,26 +327,7 @@ export async function fetchCatalog(
     return catalogCache;
   }
 
-  // Check AsyncStorage cache
-  try {
-    const cached = await safeGetItem(CATALOG_KEY);
-    if (!forceRefresh && cached) {
-      const parsed = JSON.parse(cached);
-      if (
-        Array.isArray(parsed) &&
-        parsed.length > 0 &&
-        "variant" in parsed[0] &&
-        "price_normal" in parsed[0]
-      ) {
-        catalogCache = parsed;
-        console.log(
-          "🟩 [fetchCatalog] returning ASYNCSTORAGE cache",
-          parsed.length,
-        );
-        return parsed;
-      }
-    }
-  } catch {}
+  // No localStorage cache for catalog — prices must be fresh on every page load.
 
   // Fetch from network
   try {
@@ -416,7 +397,6 @@ export async function fetchCatalog(
     }
 
     catalogCache = data;
-    await safeSetItem(CATALOG_KEY, JSON.stringify(data));
     console.log("🟩 [fetchCatalog] NETWORK success, rows:", data.length);
     return data;
   } catch (error) {
