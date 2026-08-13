@@ -329,80 +329,78 @@ export async function fetchCatalog(
 
   // No localStorage cache for catalog — prices must be fresh on every page load.
 
-  // Fetch from network
-  try {
-    // Built via the SAME helper, from the SAME endpoint string.
-    const url = buildGetUrl(endpoint, { type: "catalog" });
+  // Fetch from network with retry (GAS cold starts can fail on first attempt).
+  const url = buildGetUrl(endpoint, { type: "catalog" });
+  const MAX_ATTEMPTS = 3;
+  const RETRY_DELAY_MS = 1200;
 
-    console.log("🟦 [fetchCatalog] FINAL GET url:", url);
-
-    const response = await fetch(url, {
-      method: "GET",
-      // Follow Google's 302 redirect to script.googleusercontent.com.
-      // Note: No custom headers here — adding any non-simple header (e.g.
-      // Cache-Control) triggers a CORS preflight OPTIONS that Google Apps
-      // Script does not handle, causing ERR_FAILED on web.
-      // Cache-busting is handled by the _t timestamp in the URL instead.
-      redirect: "follow",
-    });
-
-    // ── DEBUG: log exactly what came back, including the FINAL (redirected) URL ──
-    console.log(
-      "🟦 [fetchCatalog] response.status:",
-      response.status,
-      "| response.ok:",
-      response.ok,
-      "| final url:",
-      response.url, // <-- this will show the googleusercontent echo URL
-      "| redirected:",
-      (response as any).redirected,
-    );
-
-    if (!response.ok) {
-      const text = await response.text().catch(() => "<no body>");
-      console.error(
-        "🟥 [fetchCatalog] HTTP not OK:",
-        response.status,
-        "body:",
-        text.slice(0, 500),
-      );
-      return [];
-    }
-
-    const raw = await response.text();
-    let data: any;
+  for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
     try {
-      data = JSON.parse(raw);
-    } catch {
-      // If doGet returned HTML (login page / error page) instead of JSON,
-      // this is where you'll catch it. Log the first chunk to diagnose.
-      console.error(
-        "🟥 [fetchCatalog] Response was not JSON. First 500 chars:",
-        raw.slice(0, 500),
-      );
-      return [];
-    }
+      console.log(`🟦 [fetchCatalog] attempt ${attempt}/${MAX_ATTEMPTS} url:`, url);
 
-    if (!Array.isArray(data) || data.length === 0) {
-      console.warn("🟨 [fetchCatalog] Empty / non-array payload:", data);
-      return [];
-    }
+      const response = await fetch(url, {
+        method: "GET",
+        // No custom headers — any non-simple header triggers a CORS preflight
+        // that Google Apps Script does not handle. Cache-busting is via _t param.
+        redirect: "follow",
+      });
 
-    if (!("variant" in data[0]) || !("price_normal" in data[0])) {
-      console.warn(
-        "🟨 [fetchCatalog] Payload shape unexpected (missing variant/price_normal):",
-        data[0],
-      );
-      return [];
-    }
+      if (!response.ok) {
+        console.warn(`🟨 [fetchCatalog] attempt ${attempt} HTTP ${response.status}`);
+        if (attempt < MAX_ATTEMPTS) {
+          await new Promise((r) => setTimeout(r, RETRY_DELAY_MS * attempt));
+          continue;
+        }
+        return [];
+      }
 
-    catalogCache = data;
-    console.log("🟩 [fetchCatalog] NETWORK success, rows:", data.length);
-    return data;
-  } catch (error) {
-    console.error("🟥 [fetchCatalog] Failed to fetch catalog:", error);
-    return [];
+      const raw = await response.text();
+      let data: any;
+      try {
+        data = JSON.parse(raw);
+      } catch {
+        console.warn(`🟨 [fetchCatalog] attempt ${attempt} non-JSON response`);
+        if (attempt < MAX_ATTEMPTS) {
+          await new Promise((r) => setTimeout(r, RETRY_DELAY_MS * attempt));
+          continue;
+        }
+        return [];
+      }
+
+      if (!Array.isArray(data) || data.length === 0) {
+        console.warn(`🟨 [fetchCatalog] attempt ${attempt} empty/non-array payload`);
+        if (attempt < MAX_ATTEMPTS) {
+          await new Promise((r) => setTimeout(r, RETRY_DELAY_MS * attempt));
+          continue;
+        }
+        return [];
+      }
+
+      if (!("variant" in data[0]) || !("price_normal" in data[0])) {
+        console.warn(
+          `🟨 [fetchCatalog] attempt ${attempt} unexpected shape:`,
+          data[0],
+        );
+        if (attempt < MAX_ATTEMPTS) {
+          await new Promise((r) => setTimeout(r, RETRY_DELAY_MS * attempt));
+          continue;
+        }
+        return [];
+      }
+
+      catalogCache = data;
+      console.log("🟩 [fetchCatalog] success on attempt", attempt, "rows:", data.length);
+      return data;
+    } catch (error) {
+      console.warn(`🟨 [fetchCatalog] attempt ${attempt} threw:`, error);
+      if (attempt < MAX_ATTEMPTS) {
+        await new Promise((r) => setTimeout(r, RETRY_DELAY_MS * attempt));
+      }
+    }
   }
+
+  console.error("🟥 [fetchCatalog] all attempts failed");
+  return [];
 }
 
 /**

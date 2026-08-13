@@ -125,21 +125,25 @@ export default function PosScreen() {
     );
   }
 
+  if (pos.catalogError && pos.catalog.length === 0) {
+    return (
+      <SafeAreaView style={s.loading} edges={["top"]}>
+        <Text style={s.catalogErrorEmoji}>⚠️</Text>
+        <Text style={s.catalogErrorTitle}>Katalog tidak tersedia</Text>
+        <Text style={s.catalogErrorDesc}>{pos.catalogError}</Text>
+        <TouchableOpacity style={s.catalogReloadBtn} onPress={pos.reloadCatalog}>
+          <Text style={s.catalogReloadBtnText}>Muat Ulang</Text>
+        </TouchableOpacity>
+      </SafeAreaView>
+    );
+  }
+
   return (
     <SafeAreaView style={s.root} edges={["top"]}>
       {!!feedback && (
         <View style={s.toast} pointerEvents="none">
           <Text style={s.toastText}>{feedback}</Text>
         </View>
-      )}
-
-      {!!pos.catalogError && pos.catalog.length === 0 && (
-        <TouchableOpacity style={s.catalogBanner} onPress={pos.reloadCatalog}>
-          <Text style={s.catalogBannerText}>
-            ⚠️ Menggunakan harga default – {pos.catalogError}. Ketuk untuk muat
-            ulang.
-          </Text>
-        </TouchableOpacity>
       )}
 
       <PosHeader
@@ -230,16 +234,31 @@ const s = StyleSheet.create({
     backgroundColor: C.background,
   },
   loadingText: { fontFamily: "Poppins_500Medium", color: C.mutedFg },
-  catalogBanner: {
-    backgroundColor: "#7C2D12",
-    paddingHorizontal: 14,
-    paddingVertical: 7,
+  catalogErrorEmoji: { fontSize: 40, marginBottom: 12 },
+  catalogErrorTitle: {
+    fontFamily: "Poppins_700Bold",
+    fontSize: 16,
+    color: C.foreground,
+    marginBottom: 6,
   },
-  catalogBannerText: {
-    fontFamily: "Poppins_500Medium",
-    fontSize: 11,
-    color: "#FEF3C7",
+  catalogErrorDesc: {
+    fontFamily: "Poppins_400Regular",
+    fontSize: 13,
+    color: C.mutedFg,
     textAlign: "center",
+    marginHorizontal: 32,
+    marginBottom: 24,
+  },
+  catalogReloadBtn: {
+    backgroundColor: C.primary,
+    borderRadius: 999,
+    paddingHorizontal: 32,
+    paddingVertical: 12,
+  },
+  catalogReloadBtnText: {
+    fontFamily: "Poppins_700Bold",
+    fontSize: 14,
+    color: C.primaryFg,
   },
   toast: {
     position: "absolute",
