@@ -140,11 +140,13 @@ export default function PriceManager({ settings, onSave }: Props) {
   }
 
   return (
-    <View style={[s.container, { position: "relative" as any }]}>
-      <Text style={s.title}>Manajemen Harga</Text>
-      <Text style={s.sub}>
-        Edit harga di bawah, lalu simpan ke Google Sheets.
-      </Text>
+    <View style={s.outerContainer}>
+      <View style={s.contentHeader}>
+        <Text style={s.title}>Manajemen Harga</Text>
+        <Text style={s.sub}>
+          Edit harga di bawah, lalu simpan ke Google Sheets.
+        </Text>
+      </View>
       <FlatList
         style={s.listStyle}
         contentContainerStyle={s.listContent}
@@ -205,8 +207,10 @@ export default function PriceManager({ settings, onSave }: Props) {
 }
 
 const s = StyleSheet.create({
-  container: { flex: 1, padding: 16, position: "relative" },
-  listStyle: { flex: 1, marginBottom: 60 },
+  outerContainer: { flex: 1, padding: 16, flexDirection: "column" },
+  contentHeader: { marginBottom: 12 },
+  listStyle: { flex: 1 },
+  container: { flex: 1, padding: 16 },
   centered: {
     flex: 1,
     justifyContent: "center",
@@ -286,15 +290,11 @@ const s = StyleSheet.create({
     backgroundColor: C.background,
   },
   saveBtn: {
-    position: "absolute",
-    bottom: 16,
-    left: 16,
-    right: 16,
     backgroundColor: C.primary,
     borderRadius: R.xl,
     paddingVertical: 12,
     alignItems: "center",
-    zIndex: 100,
+    marginTop: 12,
   },
   saveBtnText: {
     fontFamily: "Poppins_700Bold",
