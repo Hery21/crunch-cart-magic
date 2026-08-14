@@ -205,7 +205,7 @@ export default function PriceManager({ settings, onSave }: Props) {
 }
 
 const s = StyleSheet.create({
-  container: { flex: 1, padding: 16 },
+  container: { flex: 1, padding: 16, paddingBottom: 80 },
   centered: {
     flex: 1,
     justifyContent: "center",
@@ -245,7 +245,7 @@ const s = StyleSheet.create({
     color: C.mutedFg,
     marginBottom: 12,
   },
-  listContent: { gap: 8, paddingBottom: 12 },
+  listContent: { gap: 8 },
   row: {
     borderWidth: 1,
     borderColor: C.border,
@@ -285,11 +285,15 @@ const s = StyleSheet.create({
     backgroundColor: C.background,
   },
   saveBtn: {
+    position: "absolute",
+    bottom: 16,
+    left: 16,
+    right: 16,
     backgroundColor: C.primary,
     borderRadius: R.xl,
     paddingVertical: 12,
     alignItems: "center",
-    marginTop: 12,
+    zIndex: 10,
   },
   saveBtnText: {
     fontFamily: "Poppins_700Bold",
