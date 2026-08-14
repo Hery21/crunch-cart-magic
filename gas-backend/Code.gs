@@ -15,11 +15,11 @@ function doPost(e) {
     }
 
     const data = JSON.parse(payloadJson);
-    const type = data.type || 'order';
+    const type = data.type || "order";
 
     const ss = SpreadsheetApp.getActiveSpreadsheet();
 
-    if (type === 'update_prices') {
+    if (type === "update_prices") {
       return updatePrices(ss, data.prices);
     }
     const order = data.order;
@@ -50,7 +50,7 @@ function doPost(e) {
       total: order.total || 0,
       status: "completed",
       created_by: order.created_by || "Unknown",
-      created_at: order.created_at || new Date().toISOString()
+      created_at: order.created_at || new Date().toISOString(),
     };
 
     // --- 3. Append to orders sheet ---
@@ -65,7 +65,7 @@ function doPost(e) {
       orderData.total,
       orderData.status,
       orderData.created_by,
-      orderData.created_at
+      orderData.created_at,
     ]);
 
     // --- 4. Append items to order_items sheet ---
@@ -73,28 +73,27 @@ function doPost(e) {
     if (!itemSheet) {
       return respond(500, { error: "Sheet 'order_items' not found" });
     }
-    items.forEach(item => {
-  itemSheet.appendRow([
-    orderData.id,                // order_id
-    item.product_id || 0,
-    item.quantity || 1,
-    item.unit_price || 0,
-    item.line_total || (item.unit_price * item.quantity) || 0,
-    item.variant_id || "",       // variant_id
-    item.size || "",             // size
-    item.filling || "",          // filling
-    item.celup || "",            // celup
-    item.tabur || "",            // tabur
-    item.variant_name || "",     // variant_name
-  ]);
-});
+    items.forEach((item) => {
+      itemSheet.appendRow([
+        orderData.id, // order_id
+        item.product_id || 0,
+        item.quantity || 1,
+        item.unit_price || 0,
+        item.line_total || item.unit_price * item.quantity || 0,
+        item.variant_id || "", // variant_id
+        item.size || "", // size
+        item.filling || "", // filling
+        item.celup || "", // celup
+        item.tabur || "", // tabur
+        item.variant_name || "", // variant_name
+      ]);
+    });
 
     return respond(200, {
       success: true,
       orderNumber: orderNumber,
-      message: "Order saved"
+      message: "Order saved",
     });
-
   } catch (error) {
     console.error(error);
     return respond(500, { error: error.message });
@@ -106,18 +105,18 @@ function doPost(e) {
 // ============================================================
 function doGet(e) {
   try {
-    const type = e?.parameter?.type || 'users';
+    const type = e?.parameter?.type || "users";
     const ss = SpreadsheetApp.getActiveSpreadsheet();
 
-    if (type === 'catalog') {
+    if (type === "catalog") {
       return getCatalog(ss);
     }
 
-    if (type === 'transactions') {
+    if (type === "transactions") {
       return getTransactions(ss);
     }
 
-    if (type === 'prices') {
+    if (type === "prices") {
       return getPrices(ss);
     }
 
@@ -128,13 +127,12 @@ function doGet(e) {
     }
     const data = usersSheet.getDataRange().getValues();
     const headers = data.shift();
-    const users = data.map(row => {
+    const users = data.map((row) => {
       const obj = {};
-      headers.forEach((h, i) => obj[h] = row[i]);
+      headers.forEach((h, i) => (obj[h] = row[i]));
       return obj;
     });
     return respond(200, users);
-
   } catch (error) {
     return respond(500, { error: error.message });
   }
@@ -154,30 +152,30 @@ function getTransactions(ss) {
   // --- Read orders ---
   const orderData = orderSheet.getDataRange().getValues();
   const orderHeaders = orderData.shift();
-  const orders = orderData.map(row => {
+  const orders = orderData.map((row) => {
     const obj = {};
-    orderHeaders.forEach((h, i) => obj[h] = row[i]);
+    orderHeaders.forEach((h, i) => (obj[h] = row[i]));
     return obj;
   });
 
   // --- Read items ---
   const itemData = itemSheet.getDataRange().getValues();
   const itemHeaders = itemData.shift();
-  const items = itemData.map(row => {
+  const items = itemData.map((row) => {
     const obj = {};
-    itemHeaders.forEach((h, i) => obj[h] = row[i]);
+    itemHeaders.forEach((h, i) => (obj[h] = row[i]));
     return obj;
   });
 
   // --- Group items by order_id ---
   const itemsByOrder = {};
-  items.forEach(item => {
+  items.forEach((item) => {
     if (!itemsByOrder[item.order_id]) itemsByOrder[item.order_id] = [];
     itemsByOrder[item.order_id].push(item);
   });
 
   // --- Build transaction objects ---
-   const transactions = orders.map(order => {
+  const transactions = orders.map((order) => {
     const orderItems = itemsByOrder[order.order_id] || [];
     return {
       id: order.order_id,
@@ -187,7 +185,7 @@ function getTransactions(ss) {
       grandTotal: order.total,
       status: order.status,
       created_by: order.created_by,
-      items: orderItems.map(item => ({
+      items: orderItems.map((item) => ({
         productId: item.product_id,
         quantity: item.quantity,
         unitPrice: item.unit_price,
@@ -212,9 +210,9 @@ function getPrices(ss) {
   }
   const data = sheet.getDataRange().getValues();
   const headers = data.shift();
-  const rows = data.map(row => {
+  const rows = data.map((row) => {
     const obj = {};
-    headers.forEach((h, i) => obj[h] = row[i]);
+    headers.forEach((h, i) => (obj[h] = row[i]));
     return obj;
   });
   return respond(200, rows);
@@ -230,7 +228,7 @@ function updatePrices(ss, prices) {
     // Get existing data to find matching rows
     const existingData = sheet.getDataRange().getValues();
     const headers = existingData.shift();
-    const idIndex = headers.indexOf('id');
+    const idIndex = headers.indexOf("id");
     if (idIndex === -1) {
       return respond(400, { error: "Sheet missing 'id' column" });
     }
@@ -246,8 +244,8 @@ function updatePrices(ss, prices) {
       const rowNum = rowMap[item.id];
       if (rowNum) {
         // Find column indices for price_normal and price_kuantar
-        const normalIdx = headers.indexOf('price_normal');
-        const kuantarIdx = headers.indexOf('price_kuantar');
+        const normalIdx = headers.indexOf("price_normal");
+        const kuantarIdx = headers.indexOf("price_kuantar");
         if (normalIdx !== -1) {
           sheet.getRange(rowNum, normalIdx + 1).setValue(item.price_normal);
         }
@@ -268,9 +266,9 @@ function getCatalog(ss) {
   if (!sheet) return respond(404, { error: "product_variants not found" });
   const data = sheet.getDataRange().getValues();
   const headers = data.shift();
-  const rows = data.map(row => {
+  const rows = data.map((row) => {
     const obj = {};
-    headers.forEach((h, i) => obj[h] = row[i]);
+    headers.forEach((h, i) => (obj[h] = row[i]));
     return obj;
   });
   return respond(200, rows);
@@ -280,8 +278,8 @@ function getCatalog(ss) {
 //  respond – Helper to return JSON
 // ============================================================
 function respond(code, data) {
-  const output = ContentService
-    .createTextOutput(JSON.stringify(data))
-    .setMimeType(ContentService.MimeType.JSON);
+  const output = ContentService.createTextOutput(
+    JSON.stringify(data),
+  ).setMimeType(ContentService.MimeType.JSON);
   return output;
 }

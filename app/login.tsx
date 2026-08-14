@@ -50,7 +50,8 @@ export default function LoginScreen() {
         } catch (e) {
           console.warn(`[login] attempt ${attempt} threw:`, e);
         }
-        if (attempt < 3) await new Promise((r) => setTimeout(r, 1200 * attempt));
+        if (attempt < 3)
+          await new Promise((r) => setTimeout(r, 1200 * attempt));
       }
       clearTimeout(timeout);
 

@@ -131,7 +131,10 @@ export default function PosScreen() {
         <Text style={s.catalogErrorEmoji}>⚠️</Text>
         <Text style={s.catalogErrorTitle}>Katalog tidak tersedia</Text>
         <Text style={s.catalogErrorDesc}>{pos.catalogError}</Text>
-        <TouchableOpacity style={s.catalogReloadBtn} onPress={pos.reloadCatalog}>
+        <TouchableOpacity
+          style={s.catalogReloadBtn}
+          onPress={pos.reloadCatalog}
+        >
           <Text style={s.catalogReloadBtnText}>Muat Ulang</Text>
         </TouchableOpacity>
       </SafeAreaView>

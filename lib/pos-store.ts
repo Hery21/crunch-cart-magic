@@ -152,9 +152,14 @@ async function gasWithRetry(
     try {
       const response = await fetcher();
       if (response.ok) return response;
-      console.warn(`[${label}] attempt ${attempt}/${GAS_MAX_ATTEMPTS} HTTP ${response.status}`);
+      console.warn(
+        `[${label}] attempt ${attempt}/${GAS_MAX_ATTEMPTS} HTTP ${response.status}`,
+      );
     } catch (error) {
-      console.warn(`[${label}] attempt ${attempt}/${GAS_MAX_ATTEMPTS} threw:`, error);
+      console.warn(
+        `[${label}] attempt ${attempt}/${GAS_MAX_ATTEMPTS} threw:`,
+        error,
+      );
     }
     if (attempt < GAS_MAX_ATTEMPTS) {
       await new Promise((r) => setTimeout(r, GAS_RETRY_DELAY_MS * attempt));
@@ -572,12 +577,13 @@ export async function updateCatalogPrices(
     formData.append("payload", JSON.stringify(payload));
 
     const response = await gasWithRetry(
-      () => fetch(endpoint.trim(), {
-        method: "POST",
-        headers: { "Content-Type": "application/x-www-form-urlencoded" },
-        body: formData.toString(),
-        redirect: "follow",
-      }),
+      () =>
+        fetch(endpoint.trim(), {
+          method: "POST",
+          headers: { "Content-Type": "application/x-www-form-urlencoded" },
+          body: formData.toString(),
+          redirect: "follow",
+        }),
       "updateCatalogPrices",
     );
     if (!response) return false;

@@ -31,26 +31,29 @@ export default function PriceManager({ settings, onSave }: Props) {
     [id: number]: { price_normal: number; price_kuantar: number };
   }>({});
 
-  const loadCatalog = useCallback(async (forceRefresh = false) => {
-    if (!settings.sheetsEndpoint) {
-      setLoading(false);
-      return;
-    }
-    setLoading(true);
-    setFetchError(null);
-    try {
-      const data = await fetchCatalog(settings.sheetsEndpoint, forceRefresh);
-      if (data.length > 0) {
-        setCatalog(data);
-      } else {
-        setFetchError("Katalog kosong atau gagal dimuat dari Google Sheets.");
+  const loadCatalog = useCallback(
+    async (forceRefresh = false) => {
+      if (!settings.sheetsEndpoint) {
+        setLoading(false);
+        return;
       }
-    } catch {
-      setFetchError("Gagal menghubungi Google Sheets.");
-    } finally {
-      setLoading(false);
-    }
-  }, [settings.sheetsEndpoint]);
+      setLoading(true);
+      setFetchError(null);
+      try {
+        const data = await fetchCatalog(settings.sheetsEndpoint, forceRefresh);
+        if (data.length > 0) {
+          setCatalog(data);
+        } else {
+          setFetchError("Katalog kosong atau gagal dimuat dari Google Sheets.");
+        }
+      } catch {
+        setFetchError("Gagal menghubungi Google Sheets.");
+      } finally {
+        setLoading(false);
+      }
+    },
+    [settings.sheetsEndpoint],
+  );
 
   useEffect(() => {
     loadCatalog(true);
@@ -84,7 +87,11 @@ export default function PriceManager({ settings, onSave }: Props) {
 
     const updatedRows = catalog.map((row) => {
       const price = getRowPrice(row);
-      return { ...row, price_normal: price.normal, price_kuantar: price.kuantar };
+      return {
+        ...row,
+        price_normal: price.normal,
+        price_kuantar: price.kuantar,
+      };
     });
 
     setSyncing(true);
@@ -147,6 +154,7 @@ export default function PriceManager({ settings, onSave }: Props) {
           Edit harga di bawah, lalu simpan ke Google Sheets.
         </Text>
       </View>
+
       <FlatList
         style={s.listStyle}
         contentContainerStyle={s.listContent}
@@ -154,6 +162,7 @@ export default function PriceManager({ settings, onSave }: Props) {
         keyExtractor={(item) => item.id.toString()}
         renderItem={({ item }) => {
           const price = getRowPrice(item);
+
           return (
             <View style={s.row}>
               <Text style={s.rowLabel}>
@@ -162,6 +171,7 @@ export default function PriceManager({ settings, onSave }: Props) {
                 {item.tabur ? ` • ${item.tabur}` : ""}
                 {item.celup ? ` • ${item.celup}` : ""}
               </Text>
+
               <View style={s.priceInputs}>
                 <View style={s.priceGroup}>
                   <Text style={s.priceLabel}>Normal</Text>
@@ -174,6 +184,7 @@ export default function PriceManager({ settings, onSave }: Props) {
                     keyboardType="numeric"
                   />
                 </View>
+
                 <View style={s.priceGroup}>
                   <Text style={[s.priceLabel, { color: "#9A3412" }]}>
                     Kuantar
@@ -193,23 +204,71 @@ export default function PriceManager({ settings, onSave }: Props) {
         }}
         showsVerticalScrollIndicator={false}
       />
-      <TouchableOpacity
-        style={s.saveBtn}
-        onPress={handleSave}
-        disabled={syncing}
-      >
-        <Text style={s.saveBtnText}>
-          {syncing ? "Menyimpan..." : "Simpan ke Sheets"}
-        </Text>
-      </TouchableOpacity>
+
+      <View style={s.footer}>
+        <TouchableOpacity
+          style={[s.saveBtn, syncing && s.saveBtnDisabled]}
+          onPress={handleSave}
+          disabled={syncing}
+        >
+          <Text style={s.saveBtnText}>
+            {syncing ? "Menyimpan..." : "Simpan ke Sheets"}
+          </Text>
+        </TouchableOpacity>
+      </View>
     </View>
   );
 }
 
 const s = StyleSheet.create({
-  outerContainer: { flex: 1, padding: 16, flexDirection: "column" },
-  contentHeader: { marginBottom: 12 },
-  listStyle: { flex: 1 },
+  outerContainer: {
+    flex: 1,
+    flexDirection: "column",
+  },
+
+  contentHeader: {
+    marginBottom: 12,
+    paddingHorizontal: 16,
+    paddingTop: 16,
+  },
+
+  listStyle: {
+    flex: 1,
+  },
+
+  listContent: {
+    gap: 8,
+    paddingHorizontal: 16,
+    paddingBottom: 16,
+  },
+
+  footer: {
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    paddingBottom: 16,
+    borderTopWidth: 1,
+    borderTopColor: C.border,
+    backgroundColor: C.background,
+  },
+
+  saveBtn: {
+    backgroundColor: C.primary,
+    borderRadius: R.xl,
+    paddingVertical: 12,
+    alignItems: "center",
+  },
+
+  saveBtnDisabled: {
+    opacity: 0.6,
+  },
+
+  saveBtnText: {
+    fontFamily: "Poppins_700Bold",
+    fontSize: 15,
+    color: C.primaryFg,
+  },
+
+  // keep all your existing styles below unchanged
   container: { flex: 1, padding: 16 },
   centered: {
     flex: 1,
@@ -242,15 +301,22 @@ const s = StyleSheet.create({
     paddingVertical: 10,
     marginTop: 8,
   },
-  retryBtnText: { fontFamily: "Poppins_700Bold", fontSize: 14, color: "#fff" },
-  title: { fontFamily: "Poppins_700Bold", fontSize: 18, color: C.foreground },
+  retryBtnText: {
+    fontFamily: "Poppins_700Bold",
+    fontSize: 14,
+    color: "#fff",
+  },
+  title: {
+    fontFamily: "Poppins_700Bold",
+    fontSize: 18,
+    color: C.foreground,
+  },
   sub: {
     fontFamily: "Poppins_400Regular",
     fontSize: 13,
     color: C.mutedFg,
     marginBottom: 12,
   },
-  listContent: { gap: 8 },
   row: {
     borderWidth: 1,
     borderColor: C.border,
@@ -288,17 +354,5 @@ const s = StyleSheet.create({
     fontSize: 14,
     color: C.foreground,
     backgroundColor: C.background,
-  },
-  saveBtn: {
-    backgroundColor: C.primary,
-    borderRadius: R.xl,
-    paddingVertical: 12,
-    alignItems: "center",
-    marginTop: 12,
-  },
-  saveBtnText: {
-    fontFamily: "Poppins_700Bold",
-    fontSize: 15,
-    color: C.primaryFg,
   },
 });

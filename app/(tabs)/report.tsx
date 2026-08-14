@@ -1,9 +1,15 @@
 // app/report.tsx
 import TransactionCard from "@/features/components/TransactionCard";
-import { formatRp, fetchTransactionsFromSheets, loadSettings, loadTransactions } from "@/lib/pos-store";
+import {
+  fetchTransactionsFromSheets,
+  formatRp,
+  loadSettings,
+  loadTransactions,
+} from "@/lib/pos-store";
 import type { PaymentMethod, Transaction } from "@/lib/pos-types";
 import { C, R } from "@/lib/theme";
 import { Ionicons } from "@expo/vector-icons";
+import { useNavigation } from "@react-navigation/native";
 import { router } from "expo-router";
 import { useEffect, useMemo, useState } from "react";
 import {
@@ -15,13 +21,11 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useNavigation } from '@react-navigation/native';
 
 const PAYMENT_METHODS: PaymentMethod[] = ["Cash", "QRIS", "Kuantar"];
 
 export default function ReportScreen() {
-
-const navigation = useNavigation();
+  const navigation = useNavigation();
   const [allTransactions, setAllTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedPayment, setSelectedPayment] = useState<PaymentMethod | "">(
@@ -34,7 +38,9 @@ const navigation = useNavigation();
         setLoading(true);
         const settings = await loadSettings();
         if (settings.sheetsEndpoint) {
-          const data = await fetchTransactionsFromSheets(settings.sheetsEndpoint);
+          const data = await fetchTransactionsFromSheets(
+            settings.sheetsEndpoint,
+          );
           setAllTransactions(data);
         } else {
           // Fallback to local storage if no endpoint
@@ -52,7 +58,8 @@ const navigation = useNavigation();
   const filteredTransactions = useMemo(() => {
     const today = new Date().toISOString().slice(0, 10);
     return allTransactions.filter((tx) => {
-      if (new Date(tx.timestamp).toISOString().slice(0, 10) !== today) return false;
+      if (new Date(tx.timestamp).toISOString().slice(0, 10) !== today)
+        return false;
       if (selectedPayment && tx.paymentMethod !== selectedPayment) return false;
       return true;
     });
@@ -77,7 +84,12 @@ const navigation = useNavigation();
     <SafeAreaView style={s.root} edges={["top"]}>
       {/* Header – compact */}
       <View style={s.header}>
-        <TouchableOpacity onPress={() => navigation.canGoBack() ? router.back() : router.replace('/')} style={s.backBtn}>
+        <TouchableOpacity
+          onPress={() =>
+            navigation.canGoBack() ? router.back() : router.replace("/")
+          }
+          style={s.backBtn}
+        >
           <Ionicons name="arrow-back" size={20} color={C.foreground} />
         </TouchableOpacity>
         <Text style={s.headerTitle}>Laporan Penjualan</Text>

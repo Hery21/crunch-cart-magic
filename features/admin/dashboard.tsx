@@ -14,7 +14,6 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import PriceManager from "./price-manager";
-import SettingsPanel from "./settings-panel";
 import TransactionTab from "./transaction-tab";
 
 type Tab = "tx" | "prices" | "settings";
@@ -53,7 +52,7 @@ export default function Dashboard({ onLogout }: { onLogout: () => void }) {
           [
             ["tx", "Transaksi"],
             ["prices", "Harga"],
-            ["settings", "Pengaturan"],
+            // ["settings", "Pengaturan"],
           ] as const
         ).map(([k, l]) => (
           <TouchableOpacity
@@ -79,12 +78,12 @@ export default function Dashboard({ onLogout }: { onLogout: () => void }) {
             onSave={(s) => handleSave(s, "Harga disimpan")}
           />
         )}
-        {tab === "settings" && (
+        {/* {tab === "settings" && (
           <SettingsPanel
             settings={settings}
             onSave={(s) => handleSave(s, "Pengaturan disimpan")}
           />
-        )}
+        )} */}
       </ScrollView>
     </SafeAreaView>
   );

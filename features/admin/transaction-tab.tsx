@@ -1,5 +1,10 @@
 // features/pos/transaction-tab.tsx
-import { formatRp, fetchTransactionsFromSheets, loadSettings, loadTransactions } from "@/lib/pos-store";
+import {
+  fetchTransactionsFromSheets,
+  formatRp,
+  loadSettings,
+  loadTransactions,
+} from "@/lib/pos-store";
 import type { PaymentMethod, Transaction } from "@/lib/pos-types";
 import { C, R } from "@/lib/theme";
 import { Ionicons } from "@expo/vector-icons";
@@ -70,7 +75,9 @@ export default function TransactionTab() {
         setLoading(true);
         const settings = await loadSettings();
         if (settings.sheetsEndpoint) {
-          const data = await fetchTransactionsFromSheets(settings.sheetsEndpoint);
+          const data = await fetchTransactionsFromSheets(
+            settings.sheetsEndpoint,
+          );
           setAllTransactions(data);
         } else {
           // Fallback to local storage if no endpoint configured
@@ -170,7 +177,10 @@ export default function TransactionTab() {
               ) : (
                 <TouchableOpacity
                   style={{ flex: 1 }}
-                  onPress={() => { setPickerMode("start"); setShowPicker(true); }}
+                  onPress={() => {
+                    setPickerMode("start");
+                    setShowPicker(true);
+                  }}
                 >
                   <Text style={[s.dateButtonText, !startDate && s.placeholder]}>
                     {startDate?.toLocaleDateString("id-ID", {
@@ -199,7 +209,10 @@ export default function TransactionTab() {
               ) : (
                 <TouchableOpacity
                   style={{ flex: 1 }}
-                  onPress={() => { setPickerMode("end"); setShowPicker(true); }}
+                  onPress={() => {
+                    setPickerMode("end");
+                    setShowPicker(true);
+                  }}
                 >
                   <Text style={[s.dateButtonText, !endDate && s.placeholder]}>
                     {endDate?.toLocaleDateString("id-ID", {
