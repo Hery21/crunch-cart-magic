@@ -190,22 +190,24 @@ export default function PriceManager({ settings, onSave }: Props) {
         }}
         contentContainerStyle={s.listContent}
         showsVerticalScrollIndicator={false}
+        ListFooterComponent={
+          <TouchableOpacity
+            style={s.saveBtn}
+            onPress={handleSave}
+            disabled={syncing}
+          >
+            <Text style={s.saveBtnText}>
+              {syncing ? "Menyimpan..." : "Simpan ke Sheets"}
+            </Text>
+          </TouchableOpacity>
+        }
       />
-      <TouchableOpacity
-        style={s.saveBtn}
-        onPress={handleSave}
-        disabled={syncing}
-      >
-        <Text style={s.saveBtnText}>
-          {syncing ? "Menyimpan..." : "Simpan ke Sheets"}
-        </Text>
-      </TouchableOpacity>
     </View>
   );
 }
 
 const s = StyleSheet.create({
-  container: { flex: 1, padding: 16, paddingBottom: 80 },
+  container: { flex: 1, padding: 16 },
   centered: {
     flex: 1,
     justifyContent: "center",
@@ -245,7 +247,7 @@ const s = StyleSheet.create({
     color: C.mutedFg,
     marginBottom: 12,
   },
-  listContent: { gap: 8 },
+  listContent: { gap: 8, paddingBottom: 12 },
   row: {
     borderWidth: 1,
     borderColor: C.border,
@@ -285,15 +287,12 @@ const s = StyleSheet.create({
     backgroundColor: C.background,
   },
   saveBtn: {
-    position: "absolute",
-    bottom: 16,
-    left: 16,
-    right: 16,
     backgroundColor: C.primary,
     borderRadius: R.xl,
     paddingVertical: 12,
     alignItems: "center",
-    zIndex: 10,
+    marginTop: 12,
+    marginBottom: 12,
   },
   saveBtnText: {
     fontFamily: "Poppins_700Bold",
