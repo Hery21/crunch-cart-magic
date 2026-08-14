@@ -6,8 +6,9 @@ import { Ionicons } from "@expo/vector-icons";
 import DateTimePicker, {
   type DateTimePickerEvent,
 } from "@react-native-community/datetimepicker";
-import { useEffect, useMemo, useState } from "react";
+import { createElement, useEffect, useMemo, useState } from "react";
 import {
+  Platform,
   ScrollView,
   StyleSheet,
   Text,
@@ -15,6 +16,37 @@ import {
   View,
 } from "react-native";
 import TransactionCard from "../components/TransactionCard";
+
+/** Renders a native <input type="date"> on web so the browser date picker works. */
+function WebDateInput({
+  value,
+  onChange,
+  placeholder,
+}: {
+  value: Date | null;
+  onChange: (d: Date | null) => void;
+  placeholder: string;
+}) {
+  return createElement("input", {
+    type: "date",
+    value: value ? value.toISOString().slice(0, 10) : "",
+    placeholder,
+    onChange: (e: any) =>
+      onChange(e.target.value ? new Date(e.target.value + "T12:00:00") : null),
+    style: {
+      flex: 1,
+      border: "none",
+      background: "transparent",
+      outline: "none",
+      fontSize: 12,
+      fontFamily: "inherit",
+      cursor: "pointer",
+      color: value ? "inherit" : "#9ca3af",
+      width: "100%",
+      minWidth: 0,
+    },
+  });
+}
 
 const PAYMENT_METHODS: PaymentMethod[] = ["Cash", "QRIS", "Kuantar"];
 
@@ -122,51 +154,65 @@ export default function TransactionTab() {
         <View style={s.filterContainer}>
           <Text style={s.filterLabel}>Rentang Tanggal</Text>
           <View style={s.dateRow}>
-            <TouchableOpacity
-              style={s.dateButton}
-              onPress={() => {
-                setPickerMode("start");
-                setShowPicker(true);
-              }}
-            >
+            <View style={s.dateButton}>
               <Ionicons
                 name="calendar-outline"
                 size={14}
                 color={startDate ? C.foreground : C.mutedFg}
                 style={{ marginRight: 4 }}
               />
-              <Text style={[s.dateButtonText, !startDate && s.placeholder]}>
-                {startDate?.toLocaleDateString("id-ID", {
-                  day: "numeric",
-                  month: "short",
-                  year: "numeric",
-                }) ?? "Dari"}
-              </Text>
-            </TouchableOpacity>
+              {Platform.OS === "web" ? (
+                <WebDateInput
+                  value={startDate}
+                  onChange={setStartDate}
+                  placeholder="Dari"
+                />
+              ) : (
+                <TouchableOpacity
+                  style={{ flex: 1 }}
+                  onPress={() => { setPickerMode("start"); setShowPicker(true); }}
+                >
+                  <Text style={[s.dateButtonText, !startDate && s.placeholder]}>
+                    {startDate?.toLocaleDateString("id-ID", {
+                      day: "numeric",
+                      month: "short",
+                      year: "numeric",
+                    }) ?? "Dari"}
+                  </Text>
+                </TouchableOpacity>
+              )}
+            </View>
             <Text style={s.dateSeparator}>–</Text>
-            <TouchableOpacity
-              style={s.dateButton}
-              onPress={() => {
-                setPickerMode("end");
-                setShowPicker(true);
-              }}
-            >
+            <View style={s.dateButton}>
               <Ionicons
                 name="calendar-outline"
                 size={14}
                 color={endDate ? C.foreground : C.mutedFg}
                 style={{ marginRight: 4 }}
               />
-              <Text style={[s.dateButtonText, !endDate && s.placeholder]}>
-                {endDate?.toLocaleDateString("id-ID", {
-                  day: "numeric",
-                  month: "short",
-                  year: "numeric",
-                }) ?? "Sampai"}
-              </Text>
-            </TouchableOpacity>
+              {Platform.OS === "web" ? (
+                <WebDateInput
+                  value={endDate}
+                  onChange={setEndDate}
+                  placeholder="Sampai"
+                />
+              ) : (
+                <TouchableOpacity
+                  style={{ flex: 1 }}
+                  onPress={() => { setPickerMode("end"); setShowPicker(true); }}
+                >
+                  <Text style={[s.dateButtonText, !endDate && s.placeholder]}>
+                    {endDate?.toLocaleDateString("id-ID", {
+                      day: "numeric",
+                      month: "short",
+                      year: "numeric",
+                    }) ?? "Sampai"}
+                  </Text>
+                </TouchableOpacity>
+              )}
+            </View>
           </View>
-          {showPicker && (
+          {Platform.OS !== "web" && showPicker && (
             <DateTimePicker
               value={
                 pickerMode === "start"
