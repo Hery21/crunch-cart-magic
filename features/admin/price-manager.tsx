@@ -5,7 +5,7 @@ import {
   updateCatalogPrices,
 } from "@/lib/pos-store";
 import { C, R } from "@/lib/theme";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -31,7 +31,7 @@ export default function PriceManager({ settings, onSave }: Props) {
     [id: number]: { price_normal: number; price_kuantar: number };
   }>({});
 
-  const loadCatalog = async (forceRefresh = false) => {
+  const loadCatalog = useCallback(async (forceRefresh = false) => {
     if (!settings.sheetsEndpoint) {
       setLoading(false);
       return;
@@ -50,11 +50,11 @@ export default function PriceManager({ settings, onSave }: Props) {
     } finally {
       setLoading(false);
     }
-  };
+  }, [settings.sheetsEndpoint]);
 
   useEffect(() => {
     loadCatalog(true);
-  }, [settings.sheetsEndpoint]);
+  }, [loadCatalog]);
 
   const handlePriceChange = (
     id: number,
@@ -83,15 +83,8 @@ export default function PriceManager({ settings, onSave }: Props) {
     }
 
     const updatedRows = catalog.map((row) => {
-      const edits = editedRows[row.id];
-      if (edits) {
-        return {
-          ...row,
-          price_normal: edits.price_normal,
-          price_kuantar: edits.price_kuantar,
-        };
-      }
-      return row;
+      const price = getRowPrice(row);
+      return { ...row, price_normal: price.normal, price_kuantar: price.kuantar };
     });
 
     setSyncing(true);
@@ -153,6 +146,7 @@ export default function PriceManager({ settings, onSave }: Props) {
         Edit harga di bawah, lalu simpan ke Google Sheets.
       </Text>
       <FlatList
+        style={{ flex: 1 }}
         data={catalog}
         keyExtractor={(item) => item.id.toString()}
         renderItem={({ item }) => {
