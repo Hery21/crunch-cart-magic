@@ -140,7 +140,7 @@ export default function PriceManager({ settings, onSave }: Props) {
   }
 
   return (
-    <View style={s.container}>
+    <View style={[s.container, { position: "relative" as any }]}>
       <Text style={s.title}>Manajemen Harga</Text>
       <Text style={s.sub}>
         Edit harga di bawah, lalu simpan ke Google Sheets.
