@@ -146,7 +146,8 @@ export default function PriceManager({ settings, onSave }: Props) {
         Edit harga di bawah, lalu simpan ke Google Sheets.
       </Text>
       <FlatList
-        style={{ flex: 1 }}
+        style={s.listStyle}
+        contentContainerStyle={s.listContent}
         data={catalog}
         keyExtractor={(item) => item.id.toString()}
         renderItem={({ item }) => {
@@ -188,26 +189,24 @@ export default function PriceManager({ settings, onSave }: Props) {
             </View>
           );
         }}
-        contentContainerStyle={s.listContent}
         showsVerticalScrollIndicator={false}
-        ListFooterComponent={
-          <TouchableOpacity
-            style={s.saveBtn}
-            onPress={handleSave}
-            disabled={syncing}
-          >
-            <Text style={s.saveBtnText}>
-              {syncing ? "Menyimpan..." : "Simpan ke Sheets"}
-            </Text>
-          </TouchableOpacity>
-        }
       />
+      <TouchableOpacity
+        style={s.saveBtn}
+        onPress={handleSave}
+        disabled={syncing}
+      >
+        <Text style={s.saveBtnText}>
+          {syncing ? "Menyimpan..." : "Simpan ke Sheets"}
+        </Text>
+      </TouchableOpacity>
     </View>
   );
 }
 
 const s = StyleSheet.create({
-  container: { flex: 1, padding: 16 },
+  container: { flex: 1, padding: 16, position: "relative" },
+  listStyle: { flex: 1, marginBottom: 60 },
   centered: {
     flex: 1,
     justifyContent: "center",
@@ -247,7 +246,7 @@ const s = StyleSheet.create({
     color: C.mutedFg,
     marginBottom: 12,
   },
-  listContent: { gap: 8, paddingBottom: 12 },
+  listContent: { gap: 8 },
   row: {
     borderWidth: 1,
     borderColor: C.border,
@@ -287,12 +286,15 @@ const s = StyleSheet.create({
     backgroundColor: C.background,
   },
   saveBtn: {
+    position: "absolute",
+    bottom: 16,
+    left: 16,
+    right: 16,
     backgroundColor: C.primary,
     borderRadius: R.xl,
     paddingVertical: 12,
     alignItems: "center",
-    marginTop: 12,
-    marginBottom: 12,
+    zIndex: 100,
   },
   saveBtnText: {
     fontFamily: "Poppins_700Bold",
