@@ -50,7 +50,9 @@ const navigation = useNavigation();
   }, []);
 
   const filteredTransactions = useMemo(() => {
+    const today = new Date().toISOString().slice(0, 10);
     return allTransactions.filter((tx) => {
+      if (new Date(tx.timestamp).toISOString().slice(0, 10) !== today) return false;
       if (selectedPayment && tx.paymentMethod !== selectedPayment) return false;
       return true;
     });
