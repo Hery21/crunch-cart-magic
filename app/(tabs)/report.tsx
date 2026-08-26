@@ -9,7 +9,6 @@ import {
 import type { PaymentMethod, Transaction } from "@/lib/pos-types";
 import { C, R } from "@/lib/theme";
 import { Ionicons } from "@expo/vector-icons";
-import { useNavigation } from "@react-navigation/native";
 import { router } from "expo-router";
 import { useEffect, useMemo, useState } from "react";
 import {
@@ -25,7 +24,6 @@ import { SafeAreaView } from "react-native-safe-area-context";
 const PAYMENT_METHODS: PaymentMethod[] = ["Cash", "QRIS", "Kuantar"];
 
 export default function ReportScreen() {
-  const navigation = useNavigation();
   const [allTransactions, setAllTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedPayment, setSelectedPayment] = useState<PaymentMethod | "">(
@@ -84,12 +82,7 @@ export default function ReportScreen() {
     <SafeAreaView style={s.root} edges={["top"]}>
       {/* Header – compact */}
       <View style={s.header}>
-        <TouchableOpacity
-          onPress={() =>
-            navigation.canGoBack() ? router.back() : router.replace("/")
-          }
-          style={s.backBtn}
-        >
+        <TouchableOpacity onPress={() => router.replace("/")} style={s.backBtn}>
           <Ionicons name="arrow-back" size={20} color={C.foreground} />
         </TouchableOpacity>
         <Text style={s.headerTitle}>Laporan Penjualan</Text>

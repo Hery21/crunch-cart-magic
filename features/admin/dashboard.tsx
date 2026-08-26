@@ -36,7 +36,10 @@ export default function Dashboard({ onLogout }: { onLogout: () => void }) {
     <SafeAreaView style={s.root}>
       <View style={s.header}>
         <View style={s.headerLeft}>
-          <TouchableOpacity style={s.backBtn} onPress={() => router.back()}>
+          <TouchableOpacity
+            style={s.backBtn}
+            onPress={() => router.replace("/")}
+          >
             <Ionicons name="arrow-back" size={18} color={C.foreground} />
           </TouchableOpacity>
           <Text style={s.title}>Admin Dashboard</Text>

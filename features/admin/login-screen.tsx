@@ -25,13 +25,12 @@ export default function LoginScreen({ pin, onChangePin, onLogin }: Props) {
   return (
     <SafeAreaView style={s.root}>
       <View style={s.container}>
-        <TouchableOpacity style={s.backBtn} onPress={() => {
-                                                               if (router.canGoBack()) {
-                                                                 router.back();
-                                                               } else {
-                                                                 router.replace('/'); // or any other fallback route
-                                                               }
-                                                             }}>
+        <TouchableOpacity
+          style={s.backBtn}
+          onPress={() => {
+            router.replace("/");
+          }}
+        >
           <Ionicons name="arrow-back" size={16} color={C.mutedFg} />
           <Text style={s.backBtnText}>Kembali</Text>
         </TouchableOpacity>
