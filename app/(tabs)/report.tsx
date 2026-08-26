@@ -85,7 +85,7 @@ export default function ReportScreen() {
         <TouchableOpacity onPress={() => router.replace("/")} style={s.backBtn}>
           <Ionicons name="arrow-back" size={20} color={C.foreground} />
         </TouchableOpacity>
-        <Text style={s.headerTitle}>Laporan Penjualan</Text>
+        <Text style={s.headerTitle}>Laporan Penjualan Hari Ini</Text>
         <View style={{ width: 28 }} />
       </View>
 
