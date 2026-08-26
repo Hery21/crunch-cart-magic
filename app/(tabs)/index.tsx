@@ -23,7 +23,7 @@ import {
 } from "@/lib/pos-types";
 import { C } from "@/lib/theme";
 import { useState } from "react";
-import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function PosScreen() {
@@ -50,6 +50,7 @@ export default function PosScreen() {
       console.log("👤 Current user for order:", currentUser);
       const items: TransactionItem[] = pos.cartWithPrices.map((i) => ({
         id: i.id,
+        productId: i.productId,
         variantId: i.variantId,
         variantName: i.variantName,
         size: i.size,
@@ -118,6 +119,8 @@ export default function PosScreen() {
   if (!pos.settings || pos.catalogLoading) {
     return (
       <View style={s.loading}>
+
+                <ActivityIndicator size="large" color={C.primary} />
         <Text style={s.loadingText}>
           {!pos.settings ? "Loading..." : "Memuat katalog..."}
         </Text>

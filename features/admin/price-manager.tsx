@@ -10,6 +10,7 @@ import {
   ActivityIndicator,
   Alert,
   FlatList,
+  Platform,
   StyleSheet,
   Text,
   TextInput,
@@ -21,6 +22,15 @@ interface Props {
   settings: { sheetsEndpoint?: string };
   onSave: (s: any) => void;
 }
+
+// Web-compatible alert that works in browser
+const showAlert = (title: string, message: string) => {
+  if (Platform.OS === "web") {
+    window.alert(`${title}\n${message}`);
+  } else {
+    Alert.alert(title, message);
+  }
+};
 
 export default function PriceManager({ settings, onSave }: Props) {
   const [loading, setLoading] = useState(true);
@@ -81,7 +91,7 @@ export default function PriceManager({ settings, onSave }: Props) {
 
   const handleSave = async () => {
     if (!settings.sheetsEndpoint) {
-      Alert.alert("Error", "No sheets endpoint configured");
+      showAlert("Error", "No sheets endpoint configured");
       return;
     }
 
@@ -95,22 +105,31 @@ export default function PriceManager({ settings, onSave }: Props) {
     });
 
     setSyncing(true);
-    const success = await updateCatalogPrices(
-      settings.sheetsEndpoint,
-      updatedRows,
-    );
-    setSyncing(false);
+    try {
+      const success = await updateCatalogPrices(
+        settings.sheetsEndpoint,
+        updatedRows,
+      );
+      setSyncing(false);
 
-    if (success) {
-      Alert.alert("Berhasil", "Harga diperbarui di Google Sheets");
-      // Update local state and invalidate the in-memory catalog cache
-      // so the POS screen gets fresh prices on next load.
-      invalidateCatalogCache();
-      setCatalog(updatedRows);
-      setEditedRows({});
-      onSave({ ...settings });
-    } else {
-      Alert.alert("Error", "Gagal menyimpan ke Google Sheets");
+      if (success) {
+        // Update local state and invalidate the in-memory catalog cache
+        // so the POS screen gets fresh prices on next load.
+        invalidateCatalogCache();
+        setCatalog(updatedRows);
+        setEditedRows({});
+        onSave({ ...settings });
+        showAlert("Berhasil", "Harga diperbarui di Google Sheets");
+      } else {
+        showAlert("Error", "Gagal menyimpan ke Google Sheets");
+      }
+    } catch (error) {
+      setSyncing(false);
+      console.error("handleSave error:", error);
+      showAlert(
+        "Error",
+        `Gagal menyimpan: ${error instanceof Error ? error.message : "Unknown error"}`,
+      );
     }
   };
 
@@ -212,6 +231,7 @@ export default function PriceManager({ settings, onSave }: Props) {
           disabled={syncing}
         >
           <Text style={s.saveBtnText}>
+            <ActivityIndicator size="large" color={C.primary} />
             {syncing ? "Menyimpan..." : "Simpan ke Sheets"}
           </Text>
         </TouchableOpacity>
