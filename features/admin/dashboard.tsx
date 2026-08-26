@@ -44,10 +44,10 @@ export default function Dashboard({ onLogout }: { onLogout: () => void }) {
           </TouchableOpacity>
           <Text style={s.title}>Admin Dashboard</Text>
         </View>
-        <TouchableOpacity style={s.logoutBtn} onPress={onLogout}>
+        {/* <TouchableOpacity style={s.logoutBtn} onPress={onLogout}>
           <Ionicons name="log-out-outline" size={16} color={C.foreground} />
           <Text style={s.logoutBtnText}>Keluar</Text>
-        </TouchableOpacity>
+        </TouchableOpacity> */}
       </View>
 
       <View style={s.tabBar}>

@@ -249,6 +249,10 @@ const s = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: C.border,
     backgroundColor: C.background,
+    position: "sticky",
+    bottom: 0,
+    left: 0,
+    right: 0,
   },
 
   saveBtn: {
