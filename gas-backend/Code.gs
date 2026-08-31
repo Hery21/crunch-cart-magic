@@ -295,7 +295,8 @@ function addUser(ss, user) {
     const data = sheet.getDataRange().getValues();
     const headers = data.shift();
     const idIndex = headers.indexOf("id");
-    if (idIndex === -1) return respond(400, { error: "Sheet missing 'id' column" });
+    if (idIndex === -1)
+      return respond(400, { error: "Sheet missing 'id' column" });
 
     const maxId = data.reduce(
       (max, row) => Math.max(max, Number(row[idIndex]) || 0),
@@ -326,7 +327,8 @@ function updateUser(ss, user) {
     const data = sheet.getDataRange().getValues();
     const headers = data.shift();
     const idIndex = headers.indexOf("id");
-    if (idIndex === -1) return respond(400, { error: "Sheet missing 'id' column" });
+    if (idIndex === -1)
+      return respond(400, { error: "Sheet missing 'id' column" });
 
     const rowIdx = data.findIndex(
       (row) => String(row[idIndex]) === String(user.id),
@@ -362,7 +364,8 @@ function deleteUser(ss, id) {
     const data = sheet.getDataRange().getValues();
     const headers = data.shift();
     const idIndex = headers.indexOf("id");
-    if (idIndex === -1) return respond(400, { error: "Sheet missing 'id' column" });
+    if (idIndex === -1)
+      return respond(400, { error: "Sheet missing 'id' column" });
 
     const rowIdx = data.findIndex((row) => String(row[idIndex]) === String(id));
     if (rowIdx === -1) return respond(404, { error: "User not found" });

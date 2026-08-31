@@ -76,7 +76,9 @@ export default function UserManager({ settings }: Props) {
         if (data.length > 0) {
           setUsers(data);
         } else {
-          setFetchError("Daftar pengguna kosong atau gagal dimuat dari Google Sheets.");
+          setFetchError(
+            "Daftar pengguna kosong atau gagal dimuat dari Google Sheets.",
+          );
         }
       } catch {
         setFetchError("Gagal menghubungi Google Sheets.");

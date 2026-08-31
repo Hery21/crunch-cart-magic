@@ -639,7 +639,10 @@ export async function fetchUsers(
   return data;
 }
 
-async function postUserAction(endpoint: string, payload: object): Promise<boolean> {
+async function postUserAction(
+  endpoint: string,
+  payload: object,
+): Promise<boolean> {
   if (!endpoint) return false;
   try {
     const formData = new URLSearchParams();
