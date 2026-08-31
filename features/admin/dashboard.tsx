@@ -17,9 +17,9 @@ import PriceManager from "./price-manager";
 import TransactionTab from "./transaction-tab";
 import UserManager from "./user-manager";
 
-type Tab = "tx" | "prices" | "users" | "settings";
+type Tab = "tx" | "prices" | "users";
 
-export default function Dashboard({ onLogout }: { onLogout: () => void }) {
+export default function Dashboard() {
   const [tab, setTab] = useState<Tab>("tx");
   const [settings, setSettings] = useState(() => DEFAULT_SETTINGS);
 
@@ -45,10 +45,6 @@ export default function Dashboard({ onLogout }: { onLogout: () => void }) {
           </TouchableOpacity>
           <Text style={s.title}>Admin Dashboard</Text>
         </View>
-        {/* <TouchableOpacity style={s.logoutBtn} onPress={onLogout}>
-          <Ionicons name="log-out-outline" size={16} color={C.foreground} />
-          <Text style={s.logoutBtnText}>Keluar</Text>
-        </TouchableOpacity> */}
       </View>
 
       <View style={s.tabBar}>
@@ -57,7 +53,6 @@ export default function Dashboard({ onLogout }: { onLogout: () => void }) {
             ["tx", "Transaksi"],
             ["prices", "Harga"],
             ["users", "Pengguna"],
-            // ["settings", "Pengaturan"],
           ] as const
         ).map(([k, l]) => (
           <TouchableOpacity
@@ -84,12 +79,6 @@ export default function Dashboard({ onLogout }: { onLogout: () => void }) {
           />
         )}
         {tab === "users" && <UserManager settings={settings} />}
-        {/* {tab === "settings" && (
-          <SettingsPanel
-            settings={settings}
-            onSave={(s) => handleSave(s, "Pengaturan disimpan")}
-          />
-        )} */}
       </ScrollView>
     </SafeAreaView>
   );
@@ -112,21 +101,6 @@ const s = StyleSheet.create({
   title: {
     fontFamily: "Poppins_800ExtraBold",
     fontSize: 18,
-    color: C.foreground,
-  },
-  logoutBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-    borderWidth: 1,
-    borderColor: C.border,
-    borderRadius: R.lg,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-  },
-  logoutBtnText: {
-    fontFamily: "Poppins_600SemiBold",
-    fontSize: 12,
     color: C.foreground,
   },
   tabBar: {

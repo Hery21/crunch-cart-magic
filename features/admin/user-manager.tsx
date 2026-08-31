@@ -10,9 +10,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
-  Alert,
   FlatList,
-  Platform,
   StyleSheet,
   Text,
   TextInput,
@@ -20,6 +18,7 @@ import {
   View,
 } from "react-native";
 import StatCard from "./stat-card";
+import { showAlert, showConfirm } from "./utils";
 
 interface Props {
   settings: { sheetsEndpoint?: string };
@@ -52,27 +51,6 @@ const EMPTY_FORM = {
   password: "",
   display_name: "",
   role: "cashier",
-};
-
-// Web-compatible alert that works in browser
-const showAlert = (title: string, message: string) => {
-  if (Platform.OS === "web") {
-    window.alert(`${title}\n${message}`);
-  } else {
-    Alert.alert(title, message);
-  }
-};
-
-// Web-compatible confirm that works in browser
-const showConfirm = (title: string, message: string, onConfirm: () => void) => {
-  if (Platform.OS === "web") {
-    if (window.confirm(`${title}\n${message}`)) onConfirm();
-  } else {
-    Alert.alert(title, message, [
-      { text: "Batal", style: "cancel" },
-      { text: "Hapus", style: "destructive", onPress: onConfirm },
-    ]);
-  }
 };
 
 export default function UserManager({ settings }: Props) {

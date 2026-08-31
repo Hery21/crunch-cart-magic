@@ -1,5 +1,6 @@
 import { formatRp } from "@/lib/pos-store";
 import {
+  PAYMENT_METHOD_META,
   SIZE_LABEL,
   type PaymentMethod,
   type PriceTier,
@@ -8,12 +9,6 @@ import {
 import { C, R } from "@/lib/theme";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { Modal, StyleSheet, Text, TouchableOpacity, View } from "react-native";
-
-const PAYMENT_METHODS = [
-  { id: "Cash" as const, icon: "wallet-outline", label: "Cash" },
-  { id: "QRIS" as const, icon: "qr-code-outline", label: "QRIS" },
-  { id: "Kuantar" as const, iconSet: "mci", icon: "bike", label: "Kuantar" },
-];
 
 interface PayDialogProps {
   visible: boolean;
@@ -49,7 +44,7 @@ export function PayDialog({
         <View style={s.dialog}>
           <Text style={s.title}>Konfirmasi Pembayaran</Text>
           <View style={s.pmGrid}>
-            {PAYMENT_METHODS.map((pm) => {
+            {PAYMENT_METHOD_META.map((pm) => {
               const active = paymentMethod === pm.id;
               return (
                 <TouchableOpacity

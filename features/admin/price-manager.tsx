@@ -8,15 +8,14 @@ import { C, R } from "@/lib/theme";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
-  Alert,
   FlatList,
-  Platform,
   StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
+import { showAlert } from "./utils";
 
 interface Props {
   settings: { sheetsEndpoint?: string };
@@ -92,15 +91,6 @@ function buildGroups(catalog: CatalogItem[]): PriceGroup[] {
 
   return groups;
 }
-
-// Web-compatible alert that works in browser
-const showAlert = (title: string, message: string) => {
-  if (Platform.OS === "web") {
-    window.alert(`${title}\n${message}`);
-  } else {
-    Alert.alert(title, message);
-  }
-};
 
 export default function PriceManager({ settings, onSave }: Props) {
   const [loading, setLoading] = useState(true);

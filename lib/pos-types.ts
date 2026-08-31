@@ -104,7 +104,8 @@ export const DEFAULT_PRICES: PriceMap = {
 export const DEFAULT_SETTINGS: Settings = {
   prices: DEFAULT_PRICES,
   pin: "1234",
-  sheetsEndpoint: "https://script.google.com/macros/s/AKfycbzHgKBZsTk3E6-0Edcvu3q8oUeGT1gnsD10ChYFYoXlXWWlcEpNCi8U_JdgO1ofJGSKKQ/exec",
+  sheetsEndpoint:
+    "https://script.google.com/macros/s/AKfycbzHgKBZsTk3E6-0Edcvu3q8oUeGT1gnsD10ChYFYoXlXWWlcEpNCi8U_JdgO1ofJGSKKQ/exec",
   invoiceCounter: 0,
 };
 
@@ -125,6 +126,20 @@ export type PaymentMethod = "Cash" | "QRIS" | "Kuantar";
 export function tierForPayment(pm: PaymentMethod): PriceTier {
   return pm === "Kuantar" ? "kuantar" : "normal";
 }
+
+export const PAYMENT_METHODS: PaymentMethod[] = ["Cash", "QRIS", "Kuantar"];
+
+/** Icon + label metadata for rendering payment method pickers. */
+export const PAYMENT_METHOD_META: {
+  id: PaymentMethod;
+  icon: string;
+  iconSet?: "mci";
+  label: string;
+}[] = [
+  { id: "Cash", icon: "wallet-outline", label: "Cash" },
+  { id: "QRIS", icon: "qr-code-outline", label: "QRIS" },
+  { id: "Kuantar", iconSet: "mci", icon: "bike", label: "Kuantar" },
+];
 
 export interface TransactionItem extends CartItem {
   unitPrice: number;

@@ -1,17 +1,18 @@
-import type { PaymentMethod } from "@/lib/pos-types";
 import { clearUser, loadUser } from "@/lib/pos-store";
+import { PAYMENT_METHOD_META, type PaymentMethod } from "@/lib/pos-types";
 import { C, R } from "@/lib/theme";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
 import { useEffect, useState } from "react";
-import { Alert, Platform, StyleSheet, Text, TouchableOpacity, View } from "react-native";
-
-const PAYMENT_METHODS = [
-  { id: "Cash" as const, icon: "wallet-outline", label: "Cash" },
-  { id: "QRIS" as const, icon: "qr-code-outline", label: "QRIS" },
-  { id: "Kuantar" as const, iconSet: "mci", icon: "bike", label: "Kuantar" },
-];
+import {
+  Alert,
+  Platform,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
 
 interface Props {
   clock: string;
@@ -25,7 +26,10 @@ export default function PosHeader({
   onChangePayment,
 }: Props) {
   // Store the full user object instead of just the role
-  const [user, setUser] = useState<{ display_name: string; role: string } | null>(null);
+  const [user, setUser] = useState<{
+    display_name: string;
+    role: string;
+  } | null>(null);
 
   useEffect(() => {
     const getUser = async () => {
@@ -57,7 +61,7 @@ export default function PosHeader({
             onPress: logoutAction,
           },
         ],
-        { cancelable: true }
+        { cancelable: true },
       );
     }
   };
@@ -103,7 +107,7 @@ export default function PosHeader({
       </View>
       <View style={s.payBar}>
         <Text style={s.payBarLabel}>Harga:</Text>
-        {PAYMENT_METHODS.map((pm) => {
+        {PAYMENT_METHOD_META.map((pm) => {
           const active = paymentMethod === pm.id;
           return (
             <TouchableOpacity

@@ -6,7 +6,11 @@ import {
   loadSettings,
   loadTransactions,
 } from "@/lib/pos-store";
-import type { PaymentMethod, Transaction } from "@/lib/pos-types";
+import {
+  PAYMENT_METHODS,
+  type PaymentMethod,
+  type Transaction,
+} from "@/lib/pos-types";
 import { C, R } from "@/lib/theme";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
@@ -20,8 +24,6 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-
-const PAYMENT_METHODS: PaymentMethod[] = ["Cash", "QRIS", "Kuantar"];
 
 export default function ReportScreen() {
   const [allTransactions, setAllTransactions] = useState<Transaction[]>([]);

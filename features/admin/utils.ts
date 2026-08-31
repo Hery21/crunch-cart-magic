@@ -1,6 +1,32 @@
 import type { Transaction } from "@/lib/pos-types";
+import { Alert, Platform } from "react-native";
 
 export type Range = "today" | "week" | "all";
+
+/** Web-compatible alert; falls back to window.alert() in the browser. */
+export function showAlert(title: string, message: string) {
+  if (Platform.OS === "web") {
+    window.alert(`${title}\n${message}`);
+  } else {
+    Alert.alert(title, message);
+  }
+}
+
+/** Web-compatible destructive confirm; falls back to window.confirm() in the browser. */
+export function showConfirm(
+  title: string,
+  message: string,
+  onConfirm: () => void,
+) {
+  if (Platform.OS === "web") {
+    if (window.confirm(`${title}\n${message}`)) onConfirm();
+  } else {
+    Alert.alert(title, message, [
+      { text: "Batal", style: "cancel" },
+      { text: "Hapus", style: "destructive", onPress: onConfirm },
+    ]);
+  }
+}
 
 export function filterTransactions(
   transactions: Transaction[],

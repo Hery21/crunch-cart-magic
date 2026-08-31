@@ -5,7 +5,11 @@ import {
   loadSettings,
   loadTransactions,
 } from "@/lib/pos-store";
-import type { PaymentMethod, Transaction } from "@/lib/pos-types";
+import {
+  PAYMENT_METHODS,
+  type PaymentMethod,
+  type Transaction,
+} from "@/lib/pos-types";
 import { C, R } from "@/lib/theme";
 import { Ionicons } from "@expo/vector-icons";
 import DateTimePicker, {
@@ -54,8 +58,6 @@ function WebDateInput({
   });
 }
 
-const PAYMENT_METHODS: PaymentMethod[] = ["Cash", "QRIS", "Kuantar"];
-
 export default function TransactionTab() {
   const [allTransactions, setAllTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
@@ -100,7 +102,7 @@ export default function TransactionTab() {
   const startStr = toDateString(startDate);
   const endStr = toDateString(endDate);
 
-  const handleDateChange = (event: DateTimePickerEvent, selected?: Date) => {
+  const handleDateChange = (_event: DateTimePickerEvent, selected?: Date) => {
     setShowPicker(false);
     if (selected) {
       if (pickerMode === "start") setStartDate(selected);

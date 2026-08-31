@@ -57,7 +57,7 @@ export default function CustomizeModal({
   const [error, setError] = useState("");
 
   /** Resolve catalog variant name based on app variantId + sauceMode. */
-  function catalogVariantsFor(sz?: Size): string[] {
+  function catalogVariantsFor(): string[] {
     if (variantId === "tabur_celup") {
       return sauceMode === "tabur" ? ["tabur"] : ["celup"];
     }

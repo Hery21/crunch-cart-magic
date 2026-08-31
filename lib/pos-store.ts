@@ -62,7 +62,6 @@ const TX_KEY = "ccr.transactions";
 const CART_KEY = "ccr.cart";
 const PAY_KEY = "ccr.payment";
 const USER_KEY = "ccr.user";
-const CATALOG_KEY = "ccr.product_catalog";
 
 const memoryStore = new Map<string, string>();
 let useMemoryFallback = false;
@@ -442,47 +441,6 @@ export function getProductIdFromCatalog(
   return matched.id;
 }
 
-/**
- * Get price from catalog by matching variant + size + options.
- * Returns { normal, kuantar } or null if not found.
- */
-export function getPriceFromCatalog(
-  catalog: CatalogItem[],
-  variantId: string,
-  size: string,
-  filling?: string,
-  celup?: string,
-  tabur?: string,
-): { normal: number; kuantar: number } | null {
-  const id = getProductIdFromCatalog(
-    catalog,
-    variantId,
-    size,
-    filling,
-    celup,
-    tabur,
-  );
-  if (id === 0) return null;
-  const row = catalog.find((r) => r.id === id);
-  if (!row) return null;
-  return { normal: row.price_normal, kuantar: row.price_kuantar };
-}
-
-// ─── Legacy getProductId (deprecated – kept for backward compatibility) ───
-/** @deprecated Use getProductIdFromCatalog() with a fetched catalog instead. */
-export function getProductId(
-  variantId: string,
-  size: string,
-  filling?: string,
-  celup?: string,
-  tabur?: string,
-): number {
-  console.warn(
-    "⚠️ getProductId() is deprecated. Use getProductIdFromCatalog() with a fetched catalog.",
-  );
-  return 0;
-}
-
 // ─── Push to Sheets ──────────────────────────────────────────────────────
 /**
  * Pushes a completed transaction to Google Sheets.
@@ -611,7 +569,7 @@ export interface AppUser {
 
 let usersCache: AppUser[] | null = null;
 
-export function invalidateUsersCache(): void {
+function invalidateUsersCache(): void {
   usersCache = null;
 }
 
