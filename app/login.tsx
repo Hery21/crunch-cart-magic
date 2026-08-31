@@ -1,4 +1,4 @@
-import { loadSettings, loadUser, saveUser } from "@/lib/pos-store";
+import { loadSettings, loadUser, loginUser, saveUser } from "@/lib/pos-store";
 import { C, R } from "@/lib/theme";
 import { router } from "expo-router";
 import { useEffect, useState } from "react";
@@ -16,7 +16,8 @@ import { SafeAreaView } from "react-native-safe-area-context";
 export default function LoginScreen() {
   const [pin, setPin] = useState("");
   const [loading, setLoading] = useState(true);
-  const [users, setUsers] = useState<any[]>([]);
+  const [submitting, setSubmitting] = useState(false);
+  const [endpoint, setEndpoint] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const init = async () => {
@@ -28,46 +29,17 @@ export default function LoginScreen() {
         return;
       }
 
-      // 2. Load settings and fetch users
+      // 2. Load settings
       const settings = await loadSettings();
       const url = settings.sheetsEndpoint?.trim();
-      console.log("url", url);
       if (!url) {
         setLoading(false);
         setError(`No Google Sheets endpoint configured. ${url}`);
         return;
       }
-
-      const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 10000);
-
-      let response: Response | null = null;
-      for (let attempt = 1; attempt <= 3; attempt++) {
-        try {
-          response = await fetch(url, { signal: controller.signal });
-          if (response.ok) break;
-          console.warn(`[login] attempt ${attempt} HTTP ${response.status}`);
-        } catch (e) {
-          console.warn(`[login] attempt ${attempt} threw:`, e);
-        }
-        if (attempt < 3)
-          await new Promise((r) => setTimeout(r, 1200 * attempt));
-      }
-      clearTimeout(timeout);
-
-      if (!response || !response.ok)
-        throw new Error(`HTTP ${response?.status ?? "network error"}`);
-      const data = await response.json();
-      if (data.error) throw new Error(data.error);
-
-      // Normalize: convert password to string for comparison
-      const normalized = data.map((u: any) => ({
-        ...u,
-        password: String(u.password),
-      }));
-      setUsers(normalized);
+      setEndpoint(url);
     } catch (err: any) {
-      setError(`${err.message}` || "Failed to load users.");
+      setError(`${err.message}` || "Failed to load settings.");
     } finally {
       setLoading(false);
     }
@@ -82,8 +54,15 @@ export default function LoginScreen() {
       Alert.alert("Error", "PIN must be 4 digits");
       return;
     }
+    if (!endpoint) {
+      Alert.alert("Error", "No Google Sheets endpoint configured");
+      return;
+    }
 
-    const foundUser = users.find((u) => u.password === pin);
+    setSubmitting(true);
+    const foundUser = await loginUser(endpoint, pin);
+    setSubmitting(false);
+
     if (!foundUser) {
       Alert.alert("Login Failed", "Invalid PIN");
       return;
@@ -97,6 +76,7 @@ export default function LoginScreen() {
 
     router.replace("/(tabs)");
   };
+
 
   if (loading) {
     return (
@@ -143,10 +123,19 @@ export default function LoginScreen() {
           secureTextEntry
           maxLength={4}
           autoFocus
+          editable={!submitting}
           onSubmitEditing={handleLogin}
         />
-        <TouchableOpacity style={s.loginBtn} onPress={handleLogin}>
-          <Text style={s.loginBtnText}>Masuk</Text>
+        <TouchableOpacity
+          style={s.loginBtn}
+          onPress={handleLogin}
+          disabled={submitting}
+        >
+          {submitting ? (
+            <ActivityIndicator size="small" color={C.primaryFg} />
+          ) : (
+            <Text style={s.loginBtnText}>Masuk</Text>
+          )}
         </TouchableOpacity>
       </View>
     </SafeAreaView>

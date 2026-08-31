@@ -31,6 +31,9 @@ function doPost(e) {
     if (type === "delete_user") {
       return deleteUser(ss, data.id);
     }
+    if (type === "login") {
+      return loginUser(ss, data.pin);
+    }
     const order = data.order;
     const items = data.items;
 
@@ -129,7 +132,7 @@ function doGet(e) {
       return getPrices(ss);
     }
 
-    // Default: return users
+    // Default: return users (password hash is never exposed to clients)
     const usersSheet = ss.getSheetByName("users");
     if (!usersSheet) {
       return respond(404, { error: "Users sheet not found" });
@@ -138,7 +141,10 @@ function doGet(e) {
     const headers = data.shift();
     const users = data.map((row) => {
       const obj = {};
-      headers.forEach((h, i) => (obj[h] = row[i]));
+      headers.forEach((h, i) => {
+        if (h === "password") return;
+        obj[h] = row[i];
+      });
       return obj;
     });
     return respond(200, users);
@@ -284,11 +290,96 @@ function getCatalog(ss) {
 }
 
 // ============================================================
+//  PIN hashing – salted SHA-256, stored as "salt$hash"
+// ============================================================
+function generateSalt() {
+  return Utilities.getUuid().replace(/-/g, "");
+}
+
+function hashPin(pin, salt) {
+  const digest = Utilities.computeDigest(
+    Utilities.DigestAlgorithm.SHA_256,
+    salt + String(pin),
+    Utilities.Charset.UTF_8,
+  );
+  const hex = digest
+    .map((b) => (b < 0 ? b + 256 : b).toString(16).padStart(2, "0"))
+    .join("");
+  return salt + "$" + hex;
+}
+
+function verifyPin(pin, stored) {
+  if (!stored || stored.indexOf("$") === -1) return false;
+  const salt = stored.split("$")[0];
+  return hashPin(pin, salt) === stored;
+}
+
+// Run this ONCE manually from the Apps Script editor to hash any legacy plaintext PINs.
+function migratePlaintextPasswords() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sheet = ss.getSheetByName("users");
+  if (!sheet) return;
+  const data = sheet.getDataRange().getValues();
+  const headers = data.shift();
+  const passwordCol = headers.indexOf("password");
+  if (passwordCol === -1) return;
+
+  data.forEach((row, i) => {
+    const value = String(row[passwordCol]);
+    if (value.indexOf("$") === -1) {
+      sheet
+        .getRange(i + 2, passwordCol + 1)
+        .setValue(hashPin(value, generateSalt()));
+    }
+  });
+}
+
+// ============================================================
+//  loginUser – verifies PIN server-side, never returns the hash
+// ============================================================
+function loginUser(ss, pin) {
+  try {
+    if (!pin) return respond(400, { success: false, error: "Missing PIN" });
+    const sheet = ss.getSheetByName("users");
+    if (!sheet)
+      return respond(404, { success: false, error: "users sheet not found" });
+
+    const data = sheet.getDataRange().getValues();
+    const headers = data.shift();
+    const idx = {
+      id: headers.indexOf("id"),
+      username: headers.indexOf("username"),
+      password: headers.indexOf("password"),
+      display_name: headers.indexOf("display_name"),
+      role: headers.indexOf("role"),
+    };
+
+    const row = data.find((r) =>
+      verifyPin(String(pin), String(r[idx.password])),
+    );
+    if (!row) return respond(200, { success: false, error: "Invalid PIN" });
+
+    return respond(200, {
+      success: true,
+      user: {
+        id: row[idx.id],
+        username: row[idx.username],
+        display_name: row[idx.display_name],
+        role: row[idx.role],
+      },
+    });
+  } catch (error) {
+    return respond(500, { success: false, error: error.message });
+  }
+}
+
+// ============================================================
 //  User management – add / update / delete rows in "users" sheet
 // ============================================================
 function addUser(ss, user) {
   try {
     if (!user) return respond(400, { error: "Missing user" });
+    if (!user.password) return respond(400, { error: "Missing password" });
     const sheet = ss.getSheetByName("users");
     if (!sheet) return respond(404, { error: "users sheet not found" });
 
@@ -307,7 +398,7 @@ function addUser(ss, user) {
     sheet.appendRow([
       newId,
       user.username || "",
-      user.password || "",
+      hashPin(user.password, generateSalt()),
       user.display_name || "",
       user.role || "cashier",
     ]);
@@ -338,7 +429,6 @@ function updateUser(ss, user) {
 
     const fieldIndices = {
       username: headers.indexOf("username"),
-      password: headers.indexOf("password"),
       display_name: headers.indexOf("display_name"),
       role: headers.indexOf("role"),
     };
@@ -348,6 +438,14 @@ function updateUser(ss, user) {
         sheet.getRange(rowNum, col + 1).setValue(user[field]);
       }
     });
+
+    // Only rotate the PIN hash when a new PIN was actually supplied
+    const passwordCol = headers.indexOf("password");
+    if (passwordCol !== -1 && user.password) {
+      sheet
+        .getRange(rowNum, passwordCol + 1)
+        .setValue(hashPin(user.password, generateSalt()));
+    }
 
     return respond(200, { success: true, message: "User updated" });
   } catch (error) {

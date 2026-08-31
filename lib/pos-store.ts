@@ -603,7 +603,8 @@ export async function updateCatalogPrices(
 export interface AppUser {
   id: number;
   username: string;
-  password: string;
+  // Never populated from the server; only sent when setting/changing a PIN.
+  password?: string;
   display_name: string;
   role: string;
 }
@@ -688,6 +689,35 @@ export async function deleteUser(
   id: number,
 ): Promise<boolean> {
   return postUserAction(endpoint, { type: "delete_user", id });
+}
+
+// Verifies the PIN server-side; the raw/hashed password never reaches the client.
+export async function loginUser(
+  endpoint: string,
+  pin: string,
+): Promise<Omit<AppUser, "password"> | null> {
+  if (!endpoint) return null;
+  try {
+    const formData = new URLSearchParams();
+    formData.append("payload", JSON.stringify({ type: "login", pin }));
+
+    const response = await gasWithRetry(
+      () =>
+        fetch(endpoint.trim(), {
+          method: "POST",
+          headers: { "Content-Type": "application/x-www-form-urlencoded" },
+          body: formData.toString(),
+          redirect: "follow",
+        }),
+      "loginUser",
+    );
+    if (!response) return null;
+    const result = await response.json();
+    return result.success ? result.user : null;
+  } catch (error) {
+    console.error("Failed to login:", error);
+    return null;
+  }
 }
 
 export async function fetchTransactionsFromSheets(
