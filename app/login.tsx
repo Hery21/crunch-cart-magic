@@ -77,7 +77,6 @@ export default function LoginScreen() {
     router.replace("/(tabs)");
   };
 
-
   if (loading) {
     return (
       <SafeAreaView style={s.root}>

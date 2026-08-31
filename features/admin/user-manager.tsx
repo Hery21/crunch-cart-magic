@@ -26,8 +26,18 @@ interface Props {
 }
 
 const ROLE_META = {
-  admin: { label: "Admin", icon: "shield-checkmark" as const, bg: C.orange, fg: C.orangeText },
-  cashier: { label: "Kasir", icon: "storefront" as const, bg: C.emerald, fg: C.emeraldText },
+  admin: {
+    label: "Admin",
+    icon: "shield-checkmark" as const,
+    bg: C.orange,
+    fg: C.orangeText,
+  },
+  cashier: {
+    label: "Kasir",
+    icon: "storefront" as const,
+    bg: C.emerald,
+    fg: C.emeraldText,
+  },
 };
 
 // Initials shown in the avatar circle, e.g. "Hery Ciaputra" -> "HC"
@@ -234,7 +244,11 @@ export default function UserManager({ settings }: Props) {
     return (
       <View style={s.centered}>
         <View style={s.emptyIconWrap}>
-          <Ionicons name="alert-circle-outline" size={28} color={C.destructive} />
+          <Ionicons
+            name="alert-circle-outline"
+            size={28}
+            color={C.destructive}
+          />
         </View>
         <Text style={s.emptyText}>Gagal memuat pengguna</Text>
         <Text style={s.emptySub}>{fetchError ?? "Daftar kosong."}</Text>
@@ -343,11 +357,7 @@ export default function UserManager({ settings }: Props) {
                   />
                 </View>
                 <View style={s.inputRow}>
-                  <Ionicons
-                    name="person-outline"
-                    size={16}
-                    color={C.mutedFg}
-                  />
+                  <Ionicons name="person-outline" size={16} color={C.mutedFg} />
                   <TextInput
                     style={s.inputField}
                     placeholder="Nama Tampilan"
@@ -403,11 +413,7 @@ export default function UserManager({ settings }: Props) {
 
             {filteredUsers.length === 0 && (
               <View style={s.noResults}>
-                <Ionicons
-                  name="search-outline"
-                  size={20}
-                  color={C.mutedFg}
-                />
+                <Ionicons name="search-outline" size={20} color={C.mutedFg} />
                 <Text style={s.noResultsText}>
                   Tidak ada pengguna yang cocok dengan &quot;{search}&quot;
                 </Text>
@@ -417,7 +423,8 @@ export default function UserManager({ settings }: Props) {
         }
         renderItem={({ item }) => {
           const isEditing = editingId === item.id;
-          const role = ROLE_META[item.role as keyof typeof ROLE_META] ?? ROLE_META.cashier;
+          const role =
+            ROLE_META[item.role as keyof typeof ROLE_META] ?? ROLE_META.cashier;
 
           if (isEditing) {
             return (
@@ -459,11 +466,7 @@ export default function UserManager({ settings }: Props) {
                   />
                 </View>
                 <View style={s.inputRow}>
-                  <Ionicons
-                    name="person-outline"
-                    size={16}
-                    color={C.mutedFg}
-                  />
+                  <Ionicons name="person-outline" size={16} color={C.mutedFg} />
                   <TextInput
                     style={s.inputField}
                     placeholder="Nama Tampilan"
@@ -509,7 +512,11 @@ export default function UserManager({ settings }: Props) {
                     {syncing ? (
                       <ActivityIndicator size="small" color={C.primaryFg} />
                     ) : (
-                      <Ionicons name="checkmark" size={16} color={C.primaryFg} />
+                      <Ionicons
+                        name="checkmark"
+                        size={16}
+                        color={C.primaryFg}
+                      />
                     )}
                     <Text style={s.saveBtnText}>
                       {syncing ? "Menyimpan..." : "Simpan"}
@@ -547,13 +554,21 @@ export default function UserManager({ settings }: Props) {
                 style={s.iconBtn}
                 onPress={() => startEdit(item)}
               >
-                <Ionicons name="create-outline" size={16} color={C.foreground} />
+                <Ionicons
+                  name="create-outline"
+                  size={16}
+                  color={C.foreground}
+                />
               </TouchableOpacity>
               <TouchableOpacity
                 style={[s.iconBtn, s.iconBtnDanger]}
                 onPress={() => handleDelete(item)}
               >
-                <Ionicons name="trash-outline" size={16} color={C.destructive} />
+                <Ionicons
+                  name="trash-outline"
+                  size={16}
+                  color={C.destructive}
+                />
               </TouchableOpacity>
             </View>
           );
@@ -615,7 +630,11 @@ const s = StyleSheet.create({
   },
   retryBtnText: { fontFamily: "Poppins_700Bold", fontSize: 14, color: "#fff" },
 
-  title: { fontFamily: "Poppins_800ExtraBold", fontSize: 20, color: C.foreground },
+  title: {
+    fontFamily: "Poppins_800ExtraBold",
+    fontSize: 20,
+    color: C.foreground,
+  },
   sub: {
     fontFamily: "Poppins_400Regular",
     fontSize: 13,
