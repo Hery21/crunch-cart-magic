@@ -229,7 +229,8 @@ export async function saveSettings(s: Settings): Promise<void> {
 export async function loadTransactions(): Promise<Transaction[]> {
   try {
     const raw = await safeGetItem(TX_KEY);
-    return JSON.parse(raw ?? "[]");
+    const list: Transaction[] = JSON.parse(raw ?? "[]");
+    return sortTransactionsByDateDesc(list);
   } catch {
     return [];
   }
@@ -702,9 +703,15 @@ export async function fetchTransactionsFromSheets(
     if (!response) return [];
     const data = await response.json();
     if (data.error) return [];
-    return data;
+    return sortTransactionsByDateDesc(data);
   } catch (error) {
     console.error("Failed to fetch transactions:", error);
     return [];
   }
+}
+
+function sortTransactionsByDateDesc(list: Transaction[]): Transaction[] {
+  return [...list].sort(
+    (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime(),
+  );
 }
