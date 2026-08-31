@@ -23,7 +23,13 @@ import {
 } from "@/lib/pos-types";
 import { C } from "@/lib/theme";
 import { useState } from "react";
-import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import {
+  ActivityIndicator,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function PosScreen() {
@@ -119,8 +125,7 @@ export default function PosScreen() {
   if (!pos.settings || pos.catalogLoading) {
     return (
       <View style={s.loading}>
-
-                <ActivityIndicator size="large" color={C.primary} />
+        {!pos.settings && <ActivityIndicator size="large" color={C.primary} />}
         <Text style={s.loadingText}>
           {!pos.settings ? "Loading..." : "Memuat katalog..."}
         </Text>

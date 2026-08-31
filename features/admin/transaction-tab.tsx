@@ -131,8 +131,7 @@ export default function TransactionTab() {
   if (loading) {
     return (
       <View style={s.centered}>
-        
-                <ActivityIndicator size="large" color={C.primary} />
+        <ActivityIndicator size="large" color={C.primary} />
         <Text style={s.loadingText}>Memuat transaksi...</Text>
       </View>
     );

@@ -302,7 +302,6 @@ export default function PriceManager({ settings, onSave }: Props) {
           disabled={syncing}
         >
           <Text style={s.saveBtnText}>
-            <ActivityIndicator size="large" color={C.primary} />
             {syncing ? "Menyimpan..." : "Simpan ke Sheets"}
           </Text>
         </TouchableOpacity>
@@ -361,6 +360,10 @@ const s = StyleSheet.create({
     fontFamily: "Poppins_700Bold",
     fontSize: 15,
     color: C.primaryFg,
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    gap: 8,
   },
 
   // keep all your existing styles below unchanged

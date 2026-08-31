@@ -80,9 +80,14 @@ const s = StyleSheet.create({
     color: C.mutedFg,
     marginBottom: 12,
   },
-  menuGrid: { flexDirection: "row", flexWrap: "wrap", gap: 12 },
+  menuGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "space-between",
+    rowGap: 16,
+  },
   menuCard: {
-    width: "47.5%",
+    width: "49%",
     borderRadius: R["2xl"],
     borderWidth: 1,
     borderColor: C.border,
