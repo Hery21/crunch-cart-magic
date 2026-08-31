@@ -124,7 +124,24 @@ export function usePos() {
   const cartCount = cart.reduce((s, i) => s + i.quantity, 0);
 
   function addToCart(item: CartItem) {
-    setCart((c) => [...c, item]);
+    setCart((c) => {
+      const match = c.find(
+        (i) =>
+          i.variantId === item.variantId &&
+          i.size === item.size &&
+          i.filling === item.filling &&
+          i.celup === item.celup &&
+          i.tabur === item.tabur,
+      );
+      if (match) {
+        return c.map((i) =>
+          i.id === match.id
+            ? { ...i, quantity: i.quantity + item.quantity }
+            : i,
+        );
+      }
+      return [...c, item];
+    });
   }
 
   function updateQty(id: string, delta: number) {
