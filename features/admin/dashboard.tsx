@@ -15,8 +15,9 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import PriceManager from "./price-manager";
 import TransactionTab from "./transaction-tab";
+import UserManager from "./user-manager";
 
-type Tab = "tx" | "prices" | "settings";
+type Tab = "tx" | "prices" | "users" | "settings";
 
 export default function Dashboard({ onLogout }: { onLogout: () => void }) {
   const [tab, setTab] = useState<Tab>("tx");
@@ -55,6 +56,7 @@ export default function Dashboard({ onLogout }: { onLogout: () => void }) {
           [
             ["tx", "Transaksi"],
             ["prices", "Harga"],
+            ["users", "Pengguna"],
             // ["settings", "Pengaturan"],
           ] as const
         ).map(([k, l]) => (
@@ -81,6 +83,7 @@ export default function Dashboard({ onLogout }: { onLogout: () => void }) {
             onSave={(s) => handleSave(s, "Harga disimpan")}
           />
         )}
+        {tab === "users" && <UserManager settings={settings} />}
         {/* {tab === "settings" && (
           <SettingsPanel
             settings={settings}

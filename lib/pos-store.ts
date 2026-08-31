@@ -598,6 +598,94 @@ export async function updateCatalogPrices(
   }
 }
 
+// ─── Users (Admin management via Google Sheets) ────────────────────────────
+export interface AppUser {
+  id: number;
+  username: string;
+  password: string;
+  display_name: string;
+  role: string;
+}
+
+let usersCache: AppUser[] | null = null;
+
+export function invalidateUsersCache(): void {
+  usersCache = null;
+}
+
+export async function fetchUsers(
+  endpoint: string,
+  forceRefresh = false,
+): Promise<AppUser[]> {
+  if (!endpoint) return [];
+  if (!forceRefresh && usersCache) return usersCache;
+
+  const url = buildGetUrl(endpoint, { type: "users" });
+  const response = await gasWithRetry(
+    () => fetch(url, { method: "GET", redirect: "follow" }),
+    "fetchUsers",
+  );
+  if (!response) return [];
+
+  let data: any;
+  try {
+    data = await response.json();
+  } catch {
+    return [];
+  }
+  if (!Array.isArray(data)) return [];
+
+  usersCache = data;
+  return data;
+}
+
+async function postUserAction(endpoint: string, payload: object): Promise<boolean> {
+  if (!endpoint) return false;
+  try {
+    const formData = new URLSearchParams();
+    formData.append("payload", JSON.stringify(payload));
+
+    const response = await gasWithRetry(
+      () =>
+        fetch(endpoint.trim(), {
+          method: "POST",
+          headers: { "Content-Type": "application/x-www-form-urlencoded" },
+          body: formData.toString(),
+          redirect: "follow",
+        }),
+      "postUserAction",
+    );
+    if (!response) return false;
+    const result = await response.json();
+    if (result.success === true) invalidateUsersCache();
+    return result.success === true;
+  } catch (error) {
+    console.error("Failed to sync user:", error);
+    return false;
+  }
+}
+
+export async function addUser(
+  endpoint: string,
+  user: Omit<AppUser, "id">,
+): Promise<boolean> {
+  return postUserAction(endpoint, { type: "add_user", user });
+}
+
+export async function updateUser(
+  endpoint: string,
+  user: AppUser,
+): Promise<boolean> {
+  return postUserAction(endpoint, { type: "update_user", user });
+}
+
+export async function deleteUser(
+  endpoint: string,
+  id: number,
+): Promise<boolean> {
+  return postUserAction(endpoint, { type: "delete_user", id });
+}
+
 export async function fetchTransactionsFromSheets(
   endpoint: string,
 ): Promise<Transaction[]> {

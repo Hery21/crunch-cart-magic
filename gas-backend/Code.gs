@@ -22,6 +22,15 @@ function doPost(e) {
     if (type === "update_prices") {
       return updatePrices(ss, data.prices);
     }
+    if (type === "add_user") {
+      return addUser(ss, data.user);
+    }
+    if (type === "update_user") {
+      return updateUser(ss, data.user);
+    }
+    if (type === "delete_user") {
+      return deleteUser(ss, data.id);
+    }
     const order = data.order;
     const items = data.items;
 
@@ -272,6 +281,98 @@ function getCatalog(ss) {
     return obj;
   });
   return respond(200, rows);
+}
+
+// ============================================================
+//  User management – add / update / delete rows in "users" sheet
+// ============================================================
+function addUser(ss, user) {
+  try {
+    if (!user) return respond(400, { error: "Missing user" });
+    const sheet = ss.getSheetByName("users");
+    if (!sheet) return respond(404, { error: "users sheet not found" });
+
+    const data = sheet.getDataRange().getValues();
+    const headers = data.shift();
+    const idIndex = headers.indexOf("id");
+    if (idIndex === -1) return respond(400, { error: "Sheet missing 'id' column" });
+
+    const maxId = data.reduce(
+      (max, row) => Math.max(max, Number(row[idIndex]) || 0),
+      0,
+    );
+    const newId = maxId + 1;
+
+    sheet.appendRow([
+      newId,
+      user.username || "",
+      user.password || "",
+      user.display_name || "",
+      user.role || "cashier",
+    ]);
+
+    return respond(200, { success: true, id: newId, message: "User added" });
+  } catch (error) {
+    return respond(500, { error: error.message });
+  }
+}
+
+function updateUser(ss, user) {
+  try {
+    if (!user || !user.id) return respond(400, { error: "Missing user id" });
+    const sheet = ss.getSheetByName("users");
+    if (!sheet) return respond(404, { error: "users sheet not found" });
+
+    const data = sheet.getDataRange().getValues();
+    const headers = data.shift();
+    const idIndex = headers.indexOf("id");
+    if (idIndex === -1) return respond(400, { error: "Sheet missing 'id' column" });
+
+    const rowIdx = data.findIndex(
+      (row) => String(row[idIndex]) === String(user.id),
+    );
+    if (rowIdx === -1) return respond(404, { error: "User not found" });
+    const rowNum = rowIdx + 2; // +2 for header row + 0-based index
+
+    const fieldIndices = {
+      username: headers.indexOf("username"),
+      password: headers.indexOf("password"),
+      display_name: headers.indexOf("display_name"),
+      role: headers.indexOf("role"),
+    };
+    Object.keys(fieldIndices).forEach((field) => {
+      const col = fieldIndices[field];
+      if (col !== -1 && user[field] !== undefined) {
+        sheet.getRange(rowNum, col + 1).setValue(user[field]);
+      }
+    });
+
+    return respond(200, { success: true, message: "User updated" });
+  } catch (error) {
+    return respond(500, { error: error.message });
+  }
+}
+
+function deleteUser(ss, id) {
+  try {
+    if (!id) return respond(400, { error: "Missing user id" });
+    const sheet = ss.getSheetByName("users");
+    if (!sheet) return respond(404, { error: "users sheet not found" });
+
+    const data = sheet.getDataRange().getValues();
+    const headers = data.shift();
+    const idIndex = headers.indexOf("id");
+    if (idIndex === -1) return respond(400, { error: "Sheet missing 'id' column" });
+
+    const rowIdx = data.findIndex((row) => String(row[idIndex]) === String(id));
+    if (rowIdx === -1) return respond(404, { error: "User not found" });
+
+    sheet.deleteRow(rowIdx + 2); // +2 for header row + 0-based index
+
+    return respond(200, { success: true, message: "User deleted" });
+  } catch (error) {
+    return respond(500, { error: error.message });
+  }
 }
 
 // ============================================================
