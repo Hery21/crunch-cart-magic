@@ -5,7 +5,7 @@ import {
   updateCatalogPrices,
 } from "@/lib/pos-store";
 import { C, R } from "@/lib/theme";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -23,6 +23,76 @@ interface Props {
   onSave: (s: any) => void;
 }
 
+// Human-readable labels for each variant classification
+const VARIANT_LABELS: Record<string, string> = {
+  original: "Original",
+  filling: "Isi (Filling)",
+  tabur: "Tabur",
+  celup: "Celup",
+  filling_tabur: "Isi + Tabur",
+  filling_celup: "Isi + Celup",
+};
+const VARIANT_ORDER = Object.keys(VARIANT_LABELS);
+
+/** One row per (variant, size) classification; price applies to every catalog row it covers. */
+interface PriceGroup {
+  key: string;
+  variant: string;
+  size: string;
+  label: string;
+  ids: number[];
+  price_normal: number;
+  price_kuantar: number;
+}
+
+// Picks the most common value so a stray mismatched row doesn't skew the group's shown price.
+function modeValue(values: number[]): number {
+  const counts = new Map<number, number>();
+  let best = values[0];
+  let bestCount = 0;
+  for (const v of values) {
+    const c = (counts.get(v) ?? 0) + 1;
+    counts.set(v, c);
+    if (c > bestCount) {
+      bestCount = c;
+      best = v;
+    }
+  }
+  return best;
+}
+
+function buildGroups(catalog: CatalogItem[]): PriceGroup[] {
+  const byKey = new Map<string, CatalogItem[]>();
+  catalog.forEach((item) => {
+    const key = `${item.variant}__${item.size}`;
+    if (!byKey.has(key)) byKey.set(key, []);
+    byKey.get(key)!.push(item);
+  });
+
+  const groups: PriceGroup[] = Array.from(byKey.entries()).map(
+    ([key, items]) => ({
+      key,
+      variant: items[0].variant,
+      size: items[0].size,
+      label: `${VARIANT_LABELS[items[0].variant] ?? items[0].variant} • ${
+        items[0].size === "jumbo" ? "Jumbo" : "Regular"
+      }`,
+      ids: items.map((i) => i.id),
+      price_normal: modeValue(items.map((i) => i.price_normal)),
+      price_kuantar: modeValue(items.map((i) => i.price_kuantar)),
+    }),
+  );
+
+  groups.sort((a, b) => {
+    const va = VARIANT_ORDER.indexOf(a.variant);
+    const vb = VARIANT_ORDER.indexOf(b.variant);
+    if (va !== vb) return va - vb;
+    return a.size === b.size ? 0 : a.size === "regular" ? -1 : 1;
+  });
+
+  return groups;
+}
+
 // Web-compatible alert that works in browser
 const showAlert = (title: string, message: string) => {
   if (Platform.OS === "web") {
@@ -37,9 +107,11 @@ export default function PriceManager({ settings, onSave }: Props) {
   const [fetchError, setFetchError] = useState<string | null>(null);
   const [syncing, setSyncing] = useState(false);
   const [catalog, setCatalog] = useState<CatalogItem[]>([]);
-  const [editedRows, setEditedRows] = useState<{
-    [id: number]: { price_normal: number; price_kuantar: number };
+  const [editedGroups, setEditedGroups] = useState<{
+    [key: string]: { price_normal: number; price_kuantar: number };
   }>({});
+
+  const groups = useMemo(() => buildGroups(catalog), [catalog]);
 
   const loadCatalog = useCallback(
     async (forceRefresh = false) => {
@@ -70,22 +142,22 @@ export default function PriceManager({ settings, onSave }: Props) {
   }, [loadCatalog]);
 
   const handlePriceChange = (
-    id: number,
+    groupKey: string,
     field: "price_normal" | "price_kuantar",
     value: string,
   ) => {
     const num = Number(value.replace(/\D/g, "")) || 0;
-    setEditedRows((prev) => ({
+    setEditedGroups((prev) => ({
       ...prev,
-      [id]: { ...prev[id], [field]: num },
+      [groupKey]: { ...prev[groupKey], [field]: num },
     }));
   };
 
-  const getRowPrice = (row: CatalogItem) => {
-    const edits = editedRows[row.id];
+  const getGroupPrice = (group: PriceGroup) => {
+    const edits = editedGroups[group.key];
     return {
-      normal: edits?.price_normal ?? row.price_normal,
-      kuantar: edits?.price_kuantar ?? row.price_kuantar,
+      normal: edits?.price_normal ?? group.price_normal,
+      kuantar: edits?.price_kuantar ?? group.price_kuantar,
     };
   };
 
@@ -95,8 +167,11 @@ export default function PriceManager({ settings, onSave }: Props) {
       return;
     }
 
+    const priceByGroupKey = new Map(
+      groups.map((group) => [group.key, getGroupPrice(group)]),
+    );
     const updatedRows = catalog.map((row) => {
-      const price = getRowPrice(row);
+      const price = priceByGroupKey.get(`${row.variant}__${row.size}`)!;
       return {
         ...row,
         price_normal: price.normal,
@@ -117,7 +192,7 @@ export default function PriceManager({ settings, onSave }: Props) {
         // so the POS screen gets fresh prices on next load.
         invalidateCatalogCache();
         setCatalog(updatedRows);
-        setEditedRows({});
+        setEditedGroups({});
         onSave({ ...settings });
         showAlert("Berhasil", "Harga diperbarui di Google Sheets");
       } else {
@@ -153,7 +228,7 @@ export default function PriceManager({ settings, onSave }: Props) {
     );
   }
 
-  if (fetchError || catalog.length === 0) {
+  if (fetchError || groups.length === 0) {
     return (
       <View style={s.centered}>
         <Text style={s.emptyText}>Gagal memuat katalog</Text>
@@ -170,26 +245,22 @@ export default function PriceManager({ settings, onSave }: Props) {
       <View style={s.contentHeader}>
         <Text style={s.title}>Manajemen Harga</Text>
         <Text style={s.sub}>
-          Edit harga di bawah, lalu simpan ke Google Sheets.
+          Edit harga per klasifikasi di bawah, lalu simpan ke Google Sheets.
         </Text>
       </View>
 
       <FlatList
         style={s.listStyle}
         contentContainerStyle={s.listContent}
-        data={catalog}
-        keyExtractor={(item) => item.id.toString()}
-        renderItem={({ item }) => {
-          const price = getRowPrice(item);
+        data={groups}
+        keyExtractor={(group) => group.key}
+        renderItem={({ item: group }) => {
+          const price = getGroupPrice(group);
 
           return (
             <View style={s.row}>
-              <Text style={s.rowLabel}>
-                {item.variant} {item.size}
-                {item.filling ? ` • ${item.filling}` : ""}
-                {item.tabur ? ` • ${item.tabur}` : ""}
-                {item.celup ? ` • ${item.celup}` : ""}
-              </Text>
+              <Text style={s.rowLabel}>{group.label}</Text>
+              <Text style={s.rowCount}>{group.ids.length} varian</Text>
 
               <View style={s.priceInputs}>
                 <View style={s.priceGroup}>
@@ -198,7 +269,7 @@ export default function PriceManager({ settings, onSave }: Props) {
                     style={s.input}
                     value={String(price.normal)}
                     onChangeText={(t) =>
-                      handlePriceChange(item.id, "price_normal", t)
+                      handlePriceChange(group.key, "price_normal", t)
                     }
                     keyboardType="numeric"
                   />
@@ -212,7 +283,7 @@ export default function PriceManager({ settings, onSave }: Props) {
                     style={s.input}
                     value={String(price.kuantar)}
                     onChangeText={(t) =>
-                      handlePriceChange(item.id, "price_kuantar", t)
+                      handlePriceChange(group.key, "price_kuantar", t)
                     }
                     keyboardType="numeric"
                   />
@@ -349,10 +420,16 @@ const s = StyleSheet.create({
     backgroundColor: C.card,
   },
   rowLabel: {
-    fontFamily: "Poppins_500Medium",
-    fontSize: 12,
+    fontFamily: "Poppins_600SemiBold",
+    fontSize: 14,
     color: C.foreground,
-    marginBottom: 4,
+    marginBottom: 2,
+  },
+  rowCount: {
+    fontFamily: "Poppins_400Regular",
+    fontSize: 11,
+    color: C.mutedFg,
+    marginBottom: 6,
   },
   priceInputs: {
     flexDirection: "row",
