@@ -18,7 +18,6 @@
         "backgroundImage": "./assets/images/Eeriiccc.jpeg",
         "monochromeImage": "./assets/images/Eeriiccc.jpeg"
       },
-      "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
       "package": "com.anonymous.reactnativetestexpo"
     },
