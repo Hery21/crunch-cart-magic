@@ -100,30 +100,43 @@ export default function TransactionTab() {
     load();
   }, []);
 
-  const handleDelete = (tx: Transaction) => {
-    Alert.alert(
-      "Hapus Transaksi",
-      `Yakin ingin menghapus transaksi ${tx.id}?`,
-      [
-        { text: "Batal", style: "cancel" },
-        {
-          text: "Hapus",
-          style: "destructive",
-          onPress: async () => {
-            const ok = await deleteTransaction(endpoint, tx.id);
-            if (ok) {
-              setAllTransactions((prev) =>
-                prev.map((t) =>
-                  t.id === tx.id ? { ...t, isDeleted: true } : t,
-                ),
-              );
-            } else {
-              Alert.alert("Gagal", "Tidak dapat menghapus transaksi.");
-            }
-          },
-        },
-      ],
-    );
+  const handleDelete = async (tx: Transaction) => {
+    const confirmed =
+      Platform.OS === "web"
+        ? window.confirm(`Yakin ingin menghapus transaksi ${tx.id}?`)
+        : await new Promise((resolve) => {
+            Alert.alert(
+              "Hapus Transaksi",
+              `Yakin ingin menghapus transaksi ${tx.id}?`,
+              [
+                {
+                  text: "Batal",
+                  style: "cancel",
+                  onPress: () => resolve(false),
+                },
+                {
+                  text: "Hapus",
+                  style: "destructive",
+                  onPress: () => resolve(true),
+                },
+              ],
+            );
+          });
+
+    if (confirmed) {
+      const ok = await deleteTransaction(endpoint, tx.id);
+      if (ok) {
+        setAllTransactions((prev) =>
+          prev.map((t) => (t.id === tx.id ? { ...t, isDeleted: true } : t)),
+        );
+      } else {
+        if (Platform.OS === "web") {
+          alert("Gagal menghapus transaksi.");
+        } else {
+          Alert.alert("Gagal", "Tidak dapat menghapus transaksi.");
+        }
+      }
+    }
   };
 
   const toDateString = (d: Date | null): string =>
