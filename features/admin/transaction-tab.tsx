@@ -315,7 +315,11 @@ export default function TransactionTab() {
         </View>
       ) : (
         filtered.map((tx) => (
-          <TransactionCard key={tx.id} transaction={tx} onDelete={handleDelete} />
+          <TransactionCard
+            key={tx.id}
+            transaction={tx}
+            onDelete={handleDelete}
+          />
         ))
       )}
     </ScrollView>

@@ -43,10 +43,7 @@ export default function TransactionCard({ transaction, onDelete }: Props) {
             {dateStr} • {timeStr}
           </Text>
           {onDelete && !transaction.isDeleted && (
-            <TouchableOpacity
-              onPress={() => onDelete(transaction)}
-              hitSlop={8}
-            >
+            <TouchableOpacity onPress={() => onDelete(transaction)} hitSlop={8}>
               <Ionicons name="trash-outline" size={16} color={C.mutedFg} />
             </TouchableOpacity>
           )}
