@@ -58,6 +58,7 @@ export default function ReportScreen() {
   const filteredTransactions = useMemo(() => {
     const today = new Date().toISOString().slice(0, 10);
     return allTransactions.filter((tx) => {
+      if (tx.isDeleted) return false;
       if (new Date(tx.timestamp).toISOString().slice(0, 10) !== today)
         return false;
       if (selectedPayment && tx.paymentMethod !== selectedPayment) return false;

@@ -2,13 +2,15 @@
 import { formatRp } from "@/lib/pos-store";
 import type { Transaction } from "@/lib/pos-types";
 import { C, R } from "@/lib/theme";
-import { StyleSheet, Text, View } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
+import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 
 interface Props {
   transaction: Transaction;
+  onDelete?: (transaction: Transaction) => void;
 }
 
-export default function TransactionCard({ transaction }: Props) {
+export default function TransactionCard({ transaction, onDelete }: Props) {
   const date = new Date(transaction.timestamp);
   const timeStr = date.toLocaleTimeString("id-ID", {
     hour: "2-digit",
@@ -21,17 +23,34 @@ export default function TransactionCard({ transaction }: Props) {
   });
 
   return (
-    <View style={s.card}>
+    <View style={[s.card, transaction.isDeleted && s.cardDeleted]}>
       <View
         style={[
           s.header,
           { flexDirection: "row", justifyContent: "space-between" },
         ]}
       >
-        <Text style={s.invoiceId}>{transaction.id}</Text>
-        <Text style={s.timestamp}>
-          {dateStr} • {timeStr}
-        </Text>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+          <Text style={s.invoiceId}>{transaction.id}</Text>
+          {transaction.isDeleted && (
+            <View style={s.badgeDeleted}>
+              <Text style={s.badgeDeletedText}>DIHAPUS</Text>
+            </View>
+          )}
+        </View>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+          <Text style={s.timestamp}>
+            {dateStr} • {timeStr}
+          </Text>
+          {onDelete && !transaction.isDeleted && (
+            <TouchableOpacity
+              onPress={() => onDelete(transaction)}
+              hitSlop={8}
+            >
+              <Ionicons name="trash-outline" size={16} color={C.mutedFg} />
+            </TouchableOpacity>
+          )}
+        </View>
       </View>
 
       <View style={s.itemList}>
@@ -95,6 +114,20 @@ const s = StyleSheet.create({
     borderColor: C.border,
     padding: 14,
     marginBottom: 12,
+  },
+  cardDeleted: {
+    opacity: 0.55,
+  },
+  badgeDeleted: {
+    backgroundColor: "#fee2e2",
+    borderRadius: R.full,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+  },
+  badgeDeletedText: {
+    fontFamily: "Poppins_700Bold",
+    fontSize: 9,
+    color: "#dc2626",
   },
   header: {
     flexDirection: "row",

@@ -1,5 +1,6 @@
 // features/pos/transaction-tab.tsx
 import {
+  deleteTransaction,
   fetchTransactionsFromSheets,
   formatRp,
   loadSettings,
@@ -18,6 +19,7 @@ import DateTimePicker, {
 import { createElement, useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
+  Alert,
   Platform,
   ScrollView,
   StyleSheet,
@@ -68,6 +70,7 @@ export default function TransactionTab() {
   );
   const [showPicker, setShowPicker] = useState(false);
   const [pickerMode, setPickerMode] = useState<"start" | "end">("start");
+  const [endpoint, setEndpoint] = useState("");
 
   // ============================================================
   // Fetch transactions from Google Sheets (or fallback to local)
@@ -77,6 +80,7 @@ export default function TransactionTab() {
       try {
         setLoading(true);
         const settings = await loadSettings();
+        setEndpoint(settings.sheetsEndpoint);
         if (settings.sheetsEndpoint) {
           const data = await fetchTransactionsFromSheets(
             settings.sheetsEndpoint,
@@ -95,6 +99,32 @@ export default function TransactionTab() {
     };
     load();
   }, []);
+
+  const handleDelete = (tx: Transaction) => {
+    Alert.alert(
+      "Hapus Transaksi",
+      `Yakin ingin menghapus transaksi ${tx.id}?`,
+      [
+        { text: "Batal", style: "cancel" },
+        {
+          text: "Hapus",
+          style: "destructive",
+          onPress: async () => {
+            const ok = await deleteTransaction(endpoint, tx.id);
+            if (ok) {
+              setAllTransactions((prev) =>
+                prev.map((t) =>
+                  t.id === tx.id ? { ...t, isDeleted: true } : t,
+                ),
+              );
+            } else {
+              Alert.alert("Gagal", "Tidak dapat menghapus transaksi.");
+            }
+          },
+        },
+      ],
+    );
+  };
 
   const toDateString = (d: Date | null): string =>
     d ? d.toISOString().slice(0, 10) : "";
@@ -126,8 +156,12 @@ export default function TransactionTab() {
     return result;
   }, [allTransactions, startStr, endStr, selectedPayment]);
 
-  const totalRevenue = filtered.reduce((sum, tx) => sum + tx.grandTotal, 0);
-  const totalOrders = filtered.length;
+  const activeFiltered = filtered.filter((tx) => !tx.isDeleted);
+  const totalRevenue = activeFiltered.reduce(
+    (sum, tx) => sum + tx.grandTotal,
+    0,
+  );
+  const totalOrders = activeFiltered.length;
 
   // ---- Loading state ----
   if (loading) {
@@ -280,7 +314,9 @@ export default function TransactionTab() {
           <Text style={s.emptyText}>Tidak ada transaksi.</Text>
         </View>
       ) : (
-        filtered.map((tx) => <TransactionCard key={tx.id} transaction={tx} />)
+        filtered.map((tx) => (
+          <TransactionCard key={tx.id} transaction={tx} onDelete={handleDelete} />
+        ))
       )}
     </ScrollView>
   );

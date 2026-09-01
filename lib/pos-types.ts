@@ -154,4 +154,5 @@ export interface Transaction {
   grandTotal: number;
   paymentMethod: PaymentMethod;
   priceTier: PriceTier;
+  isDeleted?: boolean;
 }

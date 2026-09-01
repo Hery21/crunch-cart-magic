@@ -703,3 +703,35 @@ function sortTransactionsByDateDesc(list: Transaction[]): Transaction[] {
     (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime(),
   );
 }
+
+// Soft-deletes a transaction on the backend (sets isDeleted = true, row is kept).
+export async function deleteTransaction(
+  endpoint: string,
+  id: string,
+): Promise<boolean> {
+  if (!endpoint) return false;
+  try {
+    const formData = new URLSearchParams();
+    formData.append(
+      "payload",
+      JSON.stringify({ type: "delete_transaction", id }),
+    );
+
+    const response = await gasWithRetry(
+      () =>
+        fetch(endpoint.trim(), {
+          method: "POST",
+          headers: { "Content-Type": "application/x-www-form-urlencoded" },
+          body: formData.toString(),
+          redirect: "follow",
+        }),
+      "deleteTransaction",
+    );
+    if (!response) return false;
+    const result = await response.json();
+    return result.success === true;
+  } catch (error) {
+    console.error("Failed to delete transaction:", error);
+    return false;
+  }
+}

@@ -31,6 +31,9 @@ function doPost(e) {
     if (type === "delete_user") {
       return deleteUser(ss, data.id);
     }
+    if (type === "delete_transaction") {
+      return deleteTransaction(ss, data.id);
+    }
     if (type === "login") {
       return loginUser(ss, data.pin);
     }
@@ -200,6 +203,7 @@ function getTransactions(ss) {
       grandTotal: order.total,
       status: order.status,
       created_by: order.created_by,
+      isDeleted: String(order.isDeleted).toUpperCase() === "TRUE",
       items: orderItems.map((item) => ({
         productId: item.product_id,
         quantity: item.quantity,
@@ -471,6 +475,39 @@ function deleteUser(ss, id) {
     sheet.deleteRow(rowIdx + 2); // +2 for header row + 0-based index
 
     return respond(200, { success: true, message: "User deleted" });
+  } catch (error) {
+    return respond(500, { error: error.message });
+  }
+}
+
+// ============================================================
+//  deleteTransaction – Soft delete: flags orders.isDeleted = true
+// ============================================================
+function deleteTransaction(ss, id) {
+  try {
+    if (!id) return respond(400, { error: "Missing transaction id" });
+    const sheet = ss.getSheetByName("orders");
+    if (!sheet) return respond(404, { error: "orders sheet not found" });
+
+    const data = sheet.getDataRange().getValues();
+    const headers = data.shift();
+    const idIndex = headers.indexOf("order_id");
+    if (idIndex === -1)
+      return respond(400, { error: "Sheet missing 'order_id' column" });
+
+    let isDeletedIndex = headers.indexOf("isDeleted");
+    if (isDeletedIndex === -1) {
+      // Auto-create the column the first time a transaction is deleted.
+      isDeletedIndex = headers.length;
+      sheet.getRange(1, isDeletedIndex + 1).setValue("isDeleted");
+    }
+
+    const rowIdx = data.findIndex((row) => String(row[idIndex]) === String(id));
+    if (rowIdx === -1) return respond(404, { error: "Transaction not found" });
+
+    sheet.getRange(rowIdx + 2, isDeletedIndex + 1).setValue(true);
+
+    return respond(200, { success: true, message: "Transaction deleted" });
   } catch (error) {
     return respond(500, { error: error.message });
   }
