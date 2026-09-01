@@ -105,7 +105,7 @@ export const DEFAULT_SETTINGS: Settings = {
   prices: DEFAULT_PRICES,
   pin: "1234",
   sheetsEndpoint:
-    "https://script.google.com/macros/s/AKfycbzHgKBZsTk3E6-0Edcvu3q8oUeGT1gnsD10ChYFYoXlXWWlcEpNCi8U_JdgO1ofJGSKKQ/exec",
+    "https://script.google.com/macros/s/AKfycbxMWByFItQI3nkJp2Uc02ATxH63wdPnACj4AnioRy1hjQOsf0EucBggiO_ILMLTSGBZ/exec",
   invoiceCounter: 0,
 };
 
