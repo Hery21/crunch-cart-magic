@@ -348,7 +348,6 @@ export async function fetchCatalog(
   forceRefresh = false,
 ): Promise<CatalogItem[]> {
   // ── DEBUG: log the raw endpoint so we can compare with pushToSheets ──
-  console.log("🟦 [fetchCatalog] endpoint arg:", JSON.stringify(endpoint));
   console.log("🟦 [fetchCatalog] forceRefresh:", forceRefresh);
 
   if (!endpoint) {
@@ -452,7 +451,6 @@ export async function pushToSheets(
   catalog?: CatalogItem[],
 ): Promise<string | null> {
   // ── DEBUG: log the endpoint so we can compare it with fetchCatalog ──
-  console.log("🟪 [pushToSheets] endpoint arg:", JSON.stringify(endpoint));
 
   if (!endpoint) return null;
   try {
