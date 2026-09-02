@@ -65,7 +65,13 @@ function doPost(e) {
       total: order.total || 0,
       status: "completed",
       created_by: order.created_by || "Unknown",
-      created_at: order.created_at || new Date().toISOString(),
+      created_at:
+        order.created_at ||
+        Utilities.formatDate(
+          new Date(),
+          "GMT+7",
+          "yyyy-MM-dd'T'HH:mm:ss+07:00",
+        ),
     };
 
     // --- 3. Append to orders sheet ---

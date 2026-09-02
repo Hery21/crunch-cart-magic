@@ -524,6 +524,23 @@ export function formatRp(n: number): string {
   return "Rp " + n.toLocaleString("id-ID");
 }
 
+// ─── Device-local timestamps (always WIB / +07:00, never UTC) ────────────
+/** Current device time formatted with an explicit +07:00 offset (no UTC conversion). */
+export function nowLocalISOString(): string {
+  const d = new Date();
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return (
+    `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T` +
+    `${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}+07:00`
+  );
+}
+
+/** Local (device) date key "YYYY-MM-DD", independent of the string's embedded offset. */
+export function toLocalDateKey(date: Date): string {
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+}
+
 // ─── Sheets Fetch/Update (for PriceManager) ────────────────────────────
 export async function updateCatalogPrices(
   endpoint: string,

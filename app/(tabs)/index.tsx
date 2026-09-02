@@ -13,6 +13,7 @@ import {
   formatRp,
   loadUser,
   nextInvoiceId,
+  nowLocalISOString,
   pushToSheets,
   saveTransaction,
 } from "@/lib/pos-store";
@@ -70,7 +71,7 @@ export default function PosScreen() {
 
       const tx = {
         id: await nextInvoiceId(),
-        timestamp: new Date().toISOString(),
+        timestamp: nowLocalISOString(),
         items,
         subtotal: pos.subtotal,
         grandTotal: pos.grandTotal,

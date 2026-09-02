@@ -5,6 +5,7 @@ import {
   formatRp,
   loadSettings,
   loadTransactions,
+  toLocalDateKey,
 } from "@/lib/pos-store";
 import {
   PAYMENT_METHODS,
@@ -41,7 +42,7 @@ function WebDateInput({
 }) {
   return createElement("input", {
     type: "date",
-    value: value ? value.toISOString().slice(0, 10) : "",
+    value: value ? toLocalDateKey(value) : "",
     placeholder,
     onChange: (e: any) =>
       onChange(e.target.value ? new Date(e.target.value + "T12:00:00") : null),
@@ -139,8 +140,7 @@ export default function TransactionTab() {
     }
   };
 
-  const toDateString = (d: Date | null): string =>
-    d ? d.toISOString().slice(0, 10) : "";
+  const toDateString = (d: Date | null): string => (d ? toLocalDateKey(d) : "");
 
   const startStr = toDateString(startDate);
   const endStr = toDateString(endDate);
@@ -157,7 +157,7 @@ export default function TransactionTab() {
     let result = allTransactions;
     if (startStr || endStr) {
       result = result.filter((tx) => {
-        const txDate = new Date(tx.timestamp).toISOString().slice(0, 10);
+        const txDate = toLocalDateKey(new Date(tx.timestamp));
         if (startStr && txDate < startStr) return false;
         if (endStr && txDate > endStr) return false;
         return true;
