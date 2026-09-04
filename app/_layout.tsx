@@ -14,6 +14,7 @@ import * as SplashScreen from "expo-splash-screen";
 import { StatusBar } from "expo-status-bar";
 import { useEffect } from "react";
 import { ActivityIndicator, Platform, View } from "react-native";
+import { clearLegacyStorage } from "@/lib/pos-store";
 
 // Prevent splash screen from auto-hiding
 SplashScreen.preventAutoHideAsync();
@@ -50,6 +51,11 @@ export default function RootLayout() {
       SplashScreen.hideAsync();
     }
   }, [fontsLoaded]);
+
+  // One-time cleanup of obsolete AsyncStorage keys from older app versions.
+  useEffect(() => {
+    clearLegacyStorage();
+  }, []);
 
   // Handle subdirectory redirect on web (only once, after fonts load)
   useEffect(() => {

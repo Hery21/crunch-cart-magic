@@ -4,6 +4,7 @@ import {
   invalidateCatalogCache,
   updateCatalogPrices,
 } from "@/lib/pos-store";
+import { SHEETS_ENDPOINT } from "@/lib/pos-types";
 import { C, R } from "@/lib/theme";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
@@ -16,11 +17,6 @@ import {
   View,
 } from "react-native";
 import { showAlert } from "./utils";
-
-interface Props {
-  settings: { sheetsEndpoint?: string };
-  onSave: (s: any) => void;
-}
 
 // Human-readable labels for each variant classification
 const VARIANT_LABELS: Record<string, string> = {
@@ -92,7 +88,7 @@ function buildGroups(catalog: CatalogItem[]): PriceGroup[] {
   return groups;
 }
 
-export default function PriceManager({ settings, onSave }: Props) {
+export default function PriceManager() {
   const [loading, setLoading] = useState(true);
   const [fetchError, setFetchError] = useState<string | null>(null);
   const [syncing, setSyncing] = useState(false);
@@ -103,29 +99,22 @@ export default function PriceManager({ settings, onSave }: Props) {
 
   const groups = useMemo(() => buildGroups(catalog), [catalog]);
 
-  const loadCatalog = useCallback(
-    async (forceRefresh = false) => {
-      if (!settings.sheetsEndpoint) {
-        setLoading(false);
-        return;
+  const loadCatalog = useCallback(async (forceRefresh = false) => {
+    setLoading(true);
+    setFetchError(null);
+    try {
+      const data = await fetchCatalog(SHEETS_ENDPOINT, forceRefresh);
+      if (data.length > 0) {
+        setCatalog(data);
+      } else {
+        setFetchError("Katalog kosong atau gagal dimuat dari Google Sheets.");
       }
-      setLoading(true);
-      setFetchError(null);
-      try {
-        const data = await fetchCatalog(settings.sheetsEndpoint, forceRefresh);
-        if (data.length > 0) {
-          setCatalog(data);
-        } else {
-          setFetchError("Katalog kosong atau gagal dimuat dari Google Sheets.");
-        }
-      } catch {
-        setFetchError("Gagal menghubungi Google Sheets.");
-      } finally {
-        setLoading(false);
-      }
-    },
-    [settings.sheetsEndpoint],
-  );
+    } catch {
+      setFetchError("Gagal menghubungi Google Sheets.");
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
     loadCatalog(true);
@@ -152,11 +141,6 @@ export default function PriceManager({ settings, onSave }: Props) {
   };
 
   const handleSave = async () => {
-    if (!settings.sheetsEndpoint) {
-      showAlert("Error", "No sheets endpoint configured");
-      return;
-    }
-
     const priceByGroupKey = new Map(
       groups.map((group) => [group.key, getGroupPrice(group)]),
     );
@@ -171,10 +155,7 @@ export default function PriceManager({ settings, onSave }: Props) {
 
     setSyncing(true);
     try {
-      const success = await updateCatalogPrices(
-        settings.sheetsEndpoint,
-        updatedRows,
-      );
+      const success = await updateCatalogPrices(SHEETS_ENDPOINT, updatedRows);
       setSyncing(false);
 
       if (success) {
@@ -183,7 +164,6 @@ export default function PriceManager({ settings, onSave }: Props) {
         invalidateCatalogCache();
         setCatalog(updatedRows);
         setEditedGroups({});
-        onSave({ ...settings });
         showAlert("Berhasil", "Harga diperbarui di Google Sheets");
       } else {
         showAlert("Error", "Gagal menyimpan ke Google Sheets");
@@ -203,17 +183,6 @@ export default function PriceManager({ settings, onSave }: Props) {
       <View style={s.centered}>
         <ActivityIndicator size="large" color={C.primary} />
         <Text style={s.loadingText}>Memuat data...</Text>
-      </View>
-    );
-  }
-
-  if (!settings.sheetsEndpoint) {
-    return (
-      <View style={s.centered}>
-        <Text style={s.emptyText}>
-          Google Sheets endpoint tidak dikonfigurasi.
-        </Text>
-        <Text style={s.emptySub}>Atur di Pengaturan terlebih dahulu.</Text>
       </View>
     );
   }

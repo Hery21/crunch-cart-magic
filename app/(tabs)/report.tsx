@@ -3,12 +3,11 @@ import TransactionCard from "@/features/components/TransactionCard";
 import {
   fetchTransactionsFromSheets,
   formatRp,
-  loadSettings,
-  loadTransactions,
   toLocalDateKey,
 } from "@/lib/pos-store";
 import {
   PAYMENT_METHODS,
+  SHEETS_ENDPOINT,
   type PaymentMethod,
   type Transaction,
 } from "@/lib/pos-types";
@@ -37,17 +36,8 @@ export default function ReportScreen() {
     (async () => {
       try {
         setLoading(true);
-        const settings = await loadSettings();
-        if (settings.sheetsEndpoint) {
-          const data = await fetchTransactionsFromSheets(
-            settings.sheetsEndpoint,
-          );
-          setAllTransactions(data);
-        } else {
-          // Fallback to local storage if no endpoint
-          const data = await loadTransactions();
-          setAllTransactions(data);
-        }
+        const data = await fetchTransactionsFromSheets(SHEETS_ENDPOINT);
+        setAllTransactions(data);
       } catch (e) {
         console.error(e);
       } finally {

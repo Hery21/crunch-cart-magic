@@ -15,9 +15,9 @@ import {
   nextInvoiceId,
   nowLocalISOString,
   pushToSheets,
-  saveTransaction,
 } from "@/lib/pos-store";
 import {
+  SHEETS_ENDPOINT,
   type Transaction,
   type TransactionItem,
   type VariantId,
@@ -80,35 +80,17 @@ export default function PosScreen() {
         created_by: currentUser?.display_name || "Unknown",
       };
 
-      // 1. Save locally
-      await saveTransaction(tx);
-      console.log("✅ Transaction saved locally:", tx.id);
-
-      // 2. Push to Google Sheets (if endpoint is configured)
-      if (pos.settings?.sheetsEndpoint) {
-        console.log(
-          "📤 Attempting to push to sheets:",
-          pos.settings.sheetsEndpoint,
-        );
-        const success = await pushToSheets(
-          pos.settings.sheetsEndpoint,
-          tx,
-          pos.catalog,
-        );
-        if (success) {
-          console.log("✅ Sheets push successful");
-          showFeedback("Data tersimpan ke Google Sheets");
-        } else {
-          console.warn("⚠️ Sheets push failed but transaction saved locally");
-          showFeedback(
-            "⚠️ Gagal menyimpan ke Google Sheets, tapi data tersimpan lokal",
-          );
-        }
+      // Push to Google Sheets
+      const success = await pushToSheets(SHEETS_ENDPOINT, tx, pos.catalog);
+      if (success) {
+        console.log("✅ Sheets push successful");
+        showFeedback("Data tersimpan ke Google Sheets");
       } else {
-        console.log("ℹ️ No sheets endpoint configured – saving locally only");
+        console.warn("⚠️ Sheets push failed");
+        showFeedback("⚠️ Gagal menyimpan ke Google Sheets");
       }
 
-      // 3. Reset UI (only after everything succeeds or fails gracefully)
+      // Reset UI (only after everything succeeds or fails gracefully)
       setSaving(false);
       setConfirming(false);
       setPayOpen(false);
@@ -123,12 +105,12 @@ export default function PosScreen() {
     }
   }
 
-  if (!pos.settings || pos.catalogLoading) {
+  if (!pos.ready || pos.catalogLoading) {
     return (
       <View style={s.loading}>
-        {!pos.settings && <ActivityIndicator size="large" color={C.primary} />}
+        {!pos.ready && <ActivityIndicator size="large" color={C.primary} />}
         <Text style={s.loadingText}>
-          {!pos.settings ? "Loading..." : "Memuat katalog..."}
+          {!pos.ready ? "Loading..." : "Memuat katalog..."}
         </Text>
       </View>
     );
@@ -195,7 +177,7 @@ export default function PosScreen() {
         onClose={() => setCartOpen(false)}
       />
 
-      {activeVariant && pos.settings && (
+      {activeVariant && pos.ready && (
         <CustomizeModal
           variantId={activeVariant}
           catalog={pos.catalog}

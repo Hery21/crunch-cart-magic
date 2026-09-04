@@ -1,70 +1,39 @@
 import { Platform } from "react-native";
 // ─── Imports ───────────────────────────────────────────────────────────────
-import {
-  DEFAULT_PRICES,
-  DEFAULT_SETTINGS,
-  type CartItem,
-  type Settings,
-  type Transaction,
-} from "./pos-types";
+import { type CartItem, type Transaction } from "./pos-types";
 
 // ─── AsyncStorage polyfill ──────────────────────────────────────────────
+// On web, reuse the single WebAsyncStorage instance registered by web-polyfill.js
+// instead of redefining another localStorage wrapper here.
 let AsyncStorage: typeof import("@react-native-async-storage/async-storage").default;
 if (Platform.OS === "web") {
-  AsyncStorage = {
-    getItem: async (key: string) => {
-      try {
-        return localStorage.getItem(key) ?? null;
-      } catch {
-        return null;
-      }
-    },
-    setItem: async (key: string, value: string) => {
-      try {
-        localStorage.setItem(key, value);
-      } catch {}
-    },
-    removeItem: async (key: string) => {
-      try {
-        localStorage.removeItem(key);
-      } catch {}
-    },
-    clear: async () => {
-      try {
-        localStorage.clear();
-      } catch {}
-    },
-    getAllKeys: async () => {
-      try {
-        return Object.keys(localStorage);
-      } catch {
-        return [];
-      }
-    },
-    multiGet: async (keys: string[]) => {
-      return keys.map((key) => [key, localStorage.getItem(key) ?? null]);
-    },
-    multiSet: async (keyValuePairs: [string, string][]) => {
-      keyValuePairs.forEach(([key, value]) => localStorage.setItem(key, value));
-    },
-    multiRemove: async (keys: string[]) => {
-      keys.forEach((key) => localStorage.removeItem(key));
-    },
-  } as any;
+  AsyncStorage = (globalThis as any).__REACT_NATIVE_ASYNC_STORAGE__;
 } else {
   const NativeAsyncStorage =
     require("@react-native-async-storage/async-storage").default;
   AsyncStorage = NativeAsyncStorage;
 }
 
-const SETTINGS_KEY = "ccr.settings";
-const TX_KEY = "ccr.transactions";
+const INVOICE_COUNTER_KEY = "ccr.invoiceCounter";
 const CART_KEY = "ccr.cart";
 const PAY_KEY = "ccr.payment";
 const USER_KEY = "ccr.user";
 
+// Keys used by older builds that are no longer needed (sheetsEndpoint is now a
+// fixed constant, and transactions are read straight from Google Sheets).
+const LEGACY_KEYS = ["ccr.settings", "ccr.transactions"];
+
 const memoryStore = new Map<string, string>();
 let useMemoryFallback = false;
+
+/** Removes obsolete AsyncStorage keys left over from older app versions. */
+export async function clearLegacyStorage(): Promise<void> {
+  try {
+    await Promise.all(LEGACY_KEYS.map((key) => AsyncStorage.removeItem(key)));
+  } catch {
+    // best-effort cleanup only
+  }
+}
 
 // ─── Storage helpers ──────────────────────────────────────────────────────
 async function safeGetItem(key: string): Promise<string | null> {
@@ -168,79 +137,6 @@ async function gasWithRetry(
   return null;
 }
 
-// ─── Settings ─────────────────────────────────────────────────────────────
-export async function loadSettings(): Promise<Settings> {
-  try {
-    const raw = await safeGetItem(SETTINGS_KEY);
-    if (!raw) return DEFAULT_SETTINGS;
-    const parsed = JSON.parse(raw);
-    const incoming = parsed.prices ?? {};
-    const migrated: Record<string, unknown> = {};
-    for (const k of Object.keys(
-      DEFAULT_PRICES,
-    ) as (keyof typeof DEFAULT_PRICES)[]) {
-      const v = incoming[k];
-      if (v && typeof v === "object" && "regular" in v && "jumbo" in v) {
-        migrated[k] = v;
-      } else if (
-        v &&
-        typeof v === "object" &&
-        ("normal" in v || "kuantar" in v)
-      ) {
-        migrated[k] = {
-          regular: {
-            normal:
-              (v as Record<string, number>).normal ??
-              DEFAULT_PRICES[k].regular.normal,
-            kuantar:
-              (v as Record<string, number>).kuantar ??
-              DEFAULT_PRICES[k].regular.kuantar,
-          },
-          jumbo: DEFAULT_PRICES[k].jumbo,
-        };
-      } else {
-        migrated[k] = DEFAULT_PRICES[k];
-      }
-    }
-    const merged: Settings = {
-      ...DEFAULT_SETTINGS,
-      ...parsed,
-      prices: migrated as Settings["prices"],
-    };
-    // Normalize the endpoint so GET and POST are guaranteed identical.
-    merged.sheetsEndpoint = (merged.sheetsEndpoint ?? "").trim();
-    return merged;
-  } catch {
-    return DEFAULT_SETTINGS;
-  }
-}
-
-export async function saveSettings(s: Settings): Promise<void> {
-  // Trim on save too, so we never persist stray whitespace/newlines.
-  const clean: Settings = {
-    ...s,
-    sheetsEndpoint: (s.sheetsEndpoint ?? "").trim(),
-  };
-  await safeSetItem(SETTINGS_KEY, JSON.stringify(clean));
-}
-
-// ─── Transactions ─────────────────────────────────────────────────────────
-export async function loadTransactions(): Promise<Transaction[]> {
-  try {
-    const raw = await safeGetItem(TX_KEY);
-    const list: Transaction[] = JSON.parse(raw ?? "[]");
-    return sortTransactionsByDateDesc(list);
-  } catch {
-    return [];
-  }
-}
-
-export async function saveTransaction(tx: Transaction): Promise<void> {
-  const all = await loadTransactions();
-  all.unshift(tx);
-  await safeSetItem(TX_KEY, JSON.stringify(all));
-}
-
 // ─── Cart ─────────────────────────────────────────────────────────────────
 export async function loadCart(): Promise<CartItem[]> {
   try {
@@ -308,9 +204,9 @@ export async function clearUser(): Promise<void> {
 
 // ─── Invoice ID ──────────────────────────────────────────────────────────
 export async function nextInvoiceId(): Promise<string> {
-  const settings = await loadSettings();
-  const counter = (settings.invoiceCounter ?? 0) + 1;
-  await saveSettings({ ...settings, invoiceCounter: counter });
+  const raw = await safeGetItem(INVOICE_COUNTER_KEY);
+  const counter = (Number(raw) || 0) + 1;
+  await safeSetItem(INVOICE_COUNTER_KEY, String(counter));
   const d = new Date();
   const dateStr =
     String(d.getFullYear()) +

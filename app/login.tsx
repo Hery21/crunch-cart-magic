@@ -1,4 +1,5 @@
-import { loadSettings, loadUser, loginUser, saveUser } from "@/lib/pos-store";
+import { loadUser, loginUser, saveUser } from "@/lib/pos-store";
+import { SHEETS_ENDPOINT } from "@/lib/pos-types";
 import { C, R } from "@/lib/theme";
 import { router } from "expo-router";
 import { useEffect, useState } from "react";
@@ -17,29 +18,18 @@ export default function LoginScreen() {
   const [pin, setPin] = useState("");
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
-  const [endpoint, setEndpoint] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const init = async () => {
     try {
-      // 1. Check if already logged in
+      // Check if already logged in
       const existingUser = await loadUser();
       if (existingUser) {
         router.replace("/(tabs)");
         return;
       }
-
-      // 2. Load settings
-      const settings = await loadSettings();
-      const url = settings.sheetsEndpoint?.trim();
-      if (!url) {
-        setLoading(false);
-        setError(`No Google Sheets endpoint configured. ${url}`);
-        return;
-      }
-      setEndpoint(url);
     } catch (err: any) {
-      setError(`${err.message}` || "Failed to load settings.");
+      setError(`${err.message}` || "Failed to load user.");
     } finally {
       setLoading(false);
     }
@@ -54,13 +44,9 @@ export default function LoginScreen() {
       Alert.alert("Error", "PIN must be 4 digits");
       return;
     }
-    if (!endpoint) {
-      Alert.alert("Error", "No Google Sheets endpoint configured");
-      return;
-    }
 
     setSubmitting(true);
-    const foundUser = await loginUser(endpoint, pin);
+    const foundUser = await loginUser(SHEETS_ENDPOINT, pin);
     setSubmitting(false);
 
     if (!foundUser) {

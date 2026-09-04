@@ -3,12 +3,11 @@ import {
   deleteTransaction,
   fetchTransactionsFromSheets,
   formatRp,
-  loadSettings,
-  loadTransactions,
   toLocalDateKey,
 } from "@/lib/pos-store";
 import {
   PAYMENT_METHODS,
+  SHEETS_ENDPOINT,
   type PaymentMethod,
   type Transaction,
 } from "@/lib/pos-types";
@@ -71,27 +70,16 @@ export default function TransactionTab() {
   );
   const [showPicker, setShowPicker] = useState(false);
   const [pickerMode, setPickerMode] = useState<"start" | "end">("start");
-  const [endpoint, setEndpoint] = useState("");
 
   // ============================================================
-  // Fetch transactions from Google Sheets (or fallback to local)
+  // Fetch transactions from Google Sheets
   // ============================================================
   useEffect(() => {
     const load = async () => {
       try {
         setLoading(true);
-        const settings = await loadSettings();
-        setEndpoint(settings.sheetsEndpoint);
-        if (settings.sheetsEndpoint) {
-          const data = await fetchTransactionsFromSheets(
-            settings.sheetsEndpoint,
-          );
-          setAllTransactions(data);
-        } else {
-          // Fallback to local storage if no endpoint configured
-          const data = await loadTransactions();
-          setAllTransactions(data);
-        }
+        const data = await fetchTransactionsFromSheets(SHEETS_ENDPOINT);
+        setAllTransactions(data);
       } catch (error) {
         console.error("Failed to load transactions:", error);
       } finally {
@@ -125,7 +113,7 @@ export default function TransactionTab() {
           });
 
     if (confirmed) {
-      const ok = await deleteTransaction(endpoint, tx.id);
+      const ok = await deleteTransaction(SHEETS_ENDPOINT, tx.id);
       if (ok) {
         setAllTransactions((prev) =>
           prev.map((t) => (t.id === tx.id ? { ...t, isDeleted: true } : t)),

@@ -1,11 +1,8 @@
-import { loadSettings, saveSettings } from "@/lib/pos-store";
-import { DEFAULT_SETTINGS } from "@/lib/pos-types";
 import { C, R } from "@/lib/theme";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import {
-  Alert,
   ScrollView,
   StyleSheet,
   Text,
@@ -21,17 +18,6 @@ type Tab = "tx" | "prices" | "users";
 
 export default function Dashboard() {
   const [tab, setTab] = useState<Tab>("tx");
-  const [settings, setSettings] = useState(() => DEFAULT_SETTINGS);
-
-  useEffect(() => {
-    loadSettings().then(setSettings);
-  }, []);
-
-  function handleSave(s: typeof DEFAULT_SETTINGS, msg: string) {
-    saveSettings(s);
-    setSettings(s);
-    Alert.alert("Berhasil", msg);
-  }
 
   return (
     <SafeAreaView style={s.root}>
@@ -72,13 +58,8 @@ export default function Dashboard() {
         contentContainerStyle={{ padding: 16, paddingBottom: 40 }}
       >
         {tab === "tx" && <TransactionTab />}
-        {tab === "prices" && (
-          <PriceManager
-            settings={settings}
-            onSave={(s) => handleSave(s, "Harga disimpan")}
-          />
-        )}
-        {tab === "users" && <UserManager settings={settings} />}
+        {tab === "prices" && <PriceManager />}
+        {tab === "users" && <UserManager />}
       </ScrollView>
     </SafeAreaView>
   );

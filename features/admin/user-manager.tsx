@@ -5,6 +5,7 @@ import {
   updateUser,
   type AppUser,
 } from "@/lib/pos-store";
+import { SHEETS_ENDPOINT } from "@/lib/pos-types";
 import { C, R } from "@/lib/theme";
 import { Ionicons } from "@expo/vector-icons";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -19,10 +20,6 @@ import {
 } from "react-native";
 import StatCard from "./stat-card";
 import { showAlert, showConfirm } from "./utils";
-
-interface Props {
-  settings: { sheetsEndpoint?: string };
-}
 
 const ROLE_META = {
   admin: {
@@ -53,7 +50,7 @@ const EMPTY_FORM = {
   role: "cashier",
 };
 
-export default function UserManager({ settings }: Props) {
+export default function UserManager() {
   const [loading, setLoading] = useState(true);
   const [fetchError, setFetchError] = useState<string | null>(null);
   const [syncing, setSyncing] = useState(false);
@@ -81,31 +78,24 @@ export default function UserManager({ settings }: Props) {
     );
   }, [users, search]);
 
-  const loadUsers = useCallback(
-    async (forceRefresh = false) => {
-      if (!settings.sheetsEndpoint) {
-        setLoading(false);
-        return;
+  const loadUsers = useCallback(async (forceRefresh = false) => {
+    setLoading(true);
+    setFetchError(null);
+    try {
+      const data = await fetchUsers(SHEETS_ENDPOINT, forceRefresh);
+      if (data.length > 0) {
+        setUsers(data);
+      } else {
+        setFetchError(
+          "Daftar pengguna kosong atau gagal dimuat dari Google Sheets.",
+        );
       }
-      setLoading(true);
-      setFetchError(null);
-      try {
-        const data = await fetchUsers(settings.sheetsEndpoint, forceRefresh);
-        if (data.length > 0) {
-          setUsers(data);
-        } else {
-          setFetchError(
-            "Daftar pengguna kosong atau gagal dimuat dari Google Sheets.",
-          );
-        }
-      } catch {
-        setFetchError("Gagal menghubungi Google Sheets.");
-      } finally {
-        setLoading(false);
-      }
-    },
-    [settings.sheetsEndpoint],
-  );
+    } catch {
+      setFetchError("Gagal menghubungi Google Sheets.");
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
     loadUsers(true);
@@ -127,7 +117,6 @@ export default function UserManager({ settings }: Props) {
   };
 
   const handleUpdate = async (id: number) => {
-    if (!settings.sheetsEndpoint) return;
     if (!editForm.username || !editForm.display_name) {
       showAlert("Error", "Semua field wajib diisi");
       return;
@@ -136,7 +125,7 @@ export default function UserManager({ settings }: Props) {
     setSyncing(true);
     // Omit an empty password so the backend keeps the existing PIN hash.
     const { password, ...rest } = editForm;
-    const success = await updateUser(settings.sheetsEndpoint, {
+    const success = await updateUser(SHEETS_ENDPOINT, {
       id,
       ...rest,
       ...(password ? { password } : {}),
@@ -159,9 +148,8 @@ export default function UserManager({ settings }: Props) {
       "Hapus Pengguna",
       `Yakin ingin menghapus "${user.display_name}"?`,
       async () => {
-        if (!settings.sheetsEndpoint) return;
         setSyncing(true);
-        const success = await deleteUser(settings.sheetsEndpoint, user.id);
+        const success = await deleteUser(SHEETS_ENDPOINT, user.id);
         setSyncing(false);
 
         if (success) {
@@ -175,14 +163,13 @@ export default function UserManager({ settings }: Props) {
   };
 
   const handleAdd = async () => {
-    if (!settings.sheetsEndpoint) return;
     if (!addForm.username || !addForm.password || !addForm.display_name) {
       showAlert("Error", "Semua field wajib diisi");
       return;
     }
 
     setSyncing(true);
-    const success = await addUser(settings.sheetsEndpoint, addForm);
+    const success = await addUser(SHEETS_ENDPOINT, addForm);
     setSyncing(false);
 
     if (success) {
@@ -200,20 +187,6 @@ export default function UserManager({ settings }: Props) {
       <View style={s.centered}>
         <ActivityIndicator size="large" color={C.primary} />
         <Text style={s.loadingText}>Memuat data...</Text>
-      </View>
-    );
-  }
-
-  if (!settings.sheetsEndpoint) {
-    return (
-      <View style={s.centered}>
-        <View style={s.emptyIconWrap}>
-          <Ionicons name="cloud-offline-outline" size={28} color={C.mutedFg} />
-        </View>
-        <Text style={s.emptyText}>
-          Google Sheets endpoint tidak dikonfigurasi.
-        </Text>
-        <Text style={s.emptySub}>Atur di Pengaturan terlebih dahulu.</Text>
       </View>
     );
   }

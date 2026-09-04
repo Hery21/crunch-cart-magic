@@ -75,12 +75,9 @@ export interface PriceEntry {
 
 export type PriceMap = Record<VariantId, PriceEntry>;
 
-export interface Settings {
-  prices: PriceMap;
-  pin: string;
-  sheetsEndpoint: string;
-  invoiceCounter: number;
-}
+// Fixed backend endpoint — not user-configurable, so it's never persisted to storage.
+export const SHEETS_ENDPOINT =
+  "https://script.google.com/macros/s/AKfycby98VX6TJJICIlkNzlMJgv3S9d1o9MRC5lC1i14ZnQMN_coVAZzY8reDzH2xXA6tc-q/exec";
 
 export const DEFAULT_PRICES: PriceMap = {
   original: {
@@ -99,14 +96,6 @@ export const DEFAULT_PRICES: PriceMap = {
     regular: { normal: 18000, kuantar: 21000 },
     jumbo: { normal: 23000, kuantar: 26000 },
   },
-};
-
-export const DEFAULT_SETTINGS: Settings = {
-  prices: DEFAULT_PRICES,
-  pin: "1234",
-  sheetsEndpoint:
-    "https://script.google.com/macros/s/AKfycby98VX6TJJICIlkNzlMJgv3S9d1o9MRC5lC1i14ZnQMN_coVAZzY8reDzH2xXA6tc-q/exec",
-  invoiceCounter: 0,
 };
 
 export interface CartItem {

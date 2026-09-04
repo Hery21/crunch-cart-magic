@@ -3,7 +3,6 @@ import {
   fetchCatalog,
   loadCart,
   loadPayment,
-  loadSettings,
   saveCart,
   savePayment,
 } from "@/lib/pos-store";
@@ -12,7 +11,7 @@ import {
   DEFAULT_PRICES,
   type PaymentMethod,
   type PriceTier,
-  type Settings,
+  SHEETS_ENDPOINT,
   type Size,
   type VariantId,
   tierForPayment,
@@ -51,7 +50,7 @@ function catalogPrice(
 }
 
 export function usePos() {
-  const [settings, setSettings] = useState<Settings | null>(null);
+  const [ready, setReady] = useState(false);
   const [catalog, setCatalog] = useState<CatalogItem[]>([]);
   const [catalogLoading, setCatalogLoading] = useState(true);
   const [catalogError, setCatalogError] = useState<string | null>(null);
@@ -76,23 +75,16 @@ export function usePos() {
   }, []);
 
   useEffect(() => {
-    Promise.all([loadSettings(), loadCart(), loadPayment()]).then(
-      ([s, c, p]) => {
-        setSettings(s);
-        setCart(c);
-        if (p) setPaymentMethod(p as PaymentMethod);
-        if (s.sheetsEndpoint) {
-          loadCatalog(s.sheetsEndpoint);
-        } else {
-          setCatalogLoading(false);
-          setCatalogError("Sheets endpoint belum dikonfigurasi");
-        }
-      },
-    );
+    loadCatalog(SHEETS_ENDPOINT);
+    Promise.all([loadCart(), loadPayment()]).then(([c, p]) => {
+      setCart(c);
+      if (p) setPaymentMethod(p as PaymentMethod);
+      setReady(true);
+    });
   }, []);
 
   useEffect(() => {
-    if (settings) saveCart(cart);
+    if (ready) saveCart(cart);
   }, [cart]);
 
   useEffect(() => {
@@ -161,13 +153,11 @@ export function usePos() {
   }
 
   function reloadCatalog() {
-    if (settings?.sheetsEndpoint) {
-      loadCatalog(settings.sheetsEndpoint, true);
-    }
+    loadCatalog(SHEETS_ENDPOINT, true);
   }
 
   return {
-    settings,
+    ready,
     catalog,
     catalogLoading,
     catalogError,
