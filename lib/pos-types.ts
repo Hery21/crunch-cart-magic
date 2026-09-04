@@ -79,25 +79,6 @@ export type PriceMap = Record<VariantId, PriceEntry>;
 export const SHEETS_ENDPOINT =
   "https://script.google.com/macros/s/AKfycby98VX6TJJICIlkNzlMJgv3S9d1o9MRC5lC1i14ZnQMN_coVAZzY8reDzH2xXA6tc-q/exec";
 
-export const DEFAULT_PRICES: PriceMap = {
-  original: {
-    regular: { normal: 10000, kuantar: 12000 },
-    jumbo: { normal: 15000, kuantar: 17000 },
-  },
-  filling: {
-    regular: { normal: 12000, kuantar: 14500 },
-    jumbo: { normal: 17000, kuantar: 19500 },
-  },
-  tabur_celup: {
-    regular: { normal: 15000, kuantar: 17500 },
-    jumbo: { normal: 20000, kuantar: 22500 },
-  },
-  filling_tabur_celup: {
-    regular: { normal: 18000, kuantar: 21000 },
-    jumbo: { normal: 23000, kuantar: 26000 },
-  },
-};
-
 export interface CartItem {
   id: string;
   variantId: VariantId;

@@ -17,6 +17,7 @@ interface PayDialogProps {
   subtotal: number;
   grandTotal: number;
   cartEmpty: boolean;
+  disabledPaymentMethods?: PaymentMethod[];
   onChangePayment: (pm: PaymentMethod) => void;
   onConfirm: () => void;
   onClose: () => void;
@@ -29,6 +30,7 @@ export function PayDialog({
   subtotal,
   grandTotal,
   cartEmpty,
+  disabledPaymentMethods = [],
   onChangePayment,
   onConfirm,
   onClose,
@@ -46,28 +48,55 @@ export function PayDialog({
           <View style={s.pmGrid}>
             {PAYMENT_METHOD_META.map((pm) => {
               const active = paymentMethod === pm.id;
+              const disabled = disabledPaymentMethods.includes(pm.id);
               return (
                 <TouchableOpacity
                   key={pm.id}
-                  onPress={() => onChangePayment(pm.id)}
-                  style={[s.pmBtn, active && s.pmBtnActive]}
+                  onPress={() => !disabled && onChangePayment(pm.id)}
+                  disabled={disabled}
+                  style={[
+                    s.pmBtn,
+                    active && s.pmBtnActive,
+                    disabled && s.pmBtnDisabled,
+                  ]}
                 >
                   {pm.iconSet === "mci" ? (
                     <MaterialCommunityIcons
                       name={pm.icon as "bike"}
                       size={24}
-                      color={active ? C.primary : C.foreground}
+                      color={
+                        disabled
+                          ? C.mutedFg
+                          : active
+                            ? C.primary
+                            : C.foreground
+                      }
                     />
                   ) : (
                     <Ionicons
                       name={pm.icon as "wallet-outline"}
                       size={24}
-                      color={active ? C.primary : C.foreground}
+                      color={
+                        disabled
+                          ? C.mutedFg
+                          : active
+                            ? C.primary
+                            : C.foreground
+                      }
                     />
                   )}
-                  <Text style={[s.pmBtnText, active && s.pmBtnTextActive]}>
+                  <Text
+                    style={[
+                      s.pmBtnText,
+                      active && s.pmBtnTextActive,
+                      disabled && s.pmBtnTextDisabled,
+                    ]}
+                  >
                     {pm.label}
                   </Text>
+                  {disabled && (
+                    <Text style={s.pmBtnDisabledNote}>Tidak tersedia</Text>
+                  )}
                 </TouchableOpacity>
               );
             })}
@@ -298,12 +327,19 @@ const s = StyleSheet.create({
     padding: 12,
   },
   pmBtnActive: { borderColor: C.primary, backgroundColor: C.accent },
+  pmBtnDisabled: { opacity: 0.4 },
   pmBtnText: {
     fontFamily: "Poppins_600SemiBold",
     fontSize: 12,
     color: C.foreground,
   },
   pmBtnTextActive: { color: C.primary },
+  pmBtnTextDisabled: { color: C.mutedFg },
+  pmBtnDisabledNote: {
+    fontFamily: "Poppins_400Regular",
+    fontSize: 9,
+    color: C.mutedFg,
+  },
   summaryBox: {
     backgroundColor: C.muted,
     borderRadius: R.xl,

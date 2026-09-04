@@ -29,40 +29,46 @@ export default function MenuGrid({ tier, priceFor, onSelect }: Props) {
         Menu • Harga {tier === "kuantar" ? "Kuantar" : "Normal"}
       </Text>
       <View style={s.menuGrid}>
-        {VARIANTS.map((v) => (
-          <TouchableOpacity
-            key={v.id}
-            style={s.menuCard}
-            onPress={() => onSelect(v.id)}
-            activeOpacity={0.85}
-          >
-            <LinearGradient
-              colors={[C.sunny, C.accent, C.primary + "50"]}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              style={s.menuCardImage}
+        {VARIANTS.map((v) => {
+          const availableSizes = SIZES.filter((sz) => priceFor(v.id, sz) > 0);
+          // Hide the whole item if it's not sold in any size for this tier.
+          if (availableSizes.length === 0) return null;
+
+          return (
+            <TouchableOpacity
+              key={v.id}
+              style={s.menuCard}
+              onPress={() => onSelect(v.id)}
+              activeOpacity={0.85}
             >
-              <Text style={s.menuCardEmoji}>🌯</Text>
-            </LinearGradient>
-            <View style={s.menuCardBody}>
-              <Text style={s.menuCardName}>{v.name}</Text>
-              <Text style={s.menuCardDesc}>{v.description}</Text>
-              <View style={s.menuCardPrices}>
-                {SIZES.map((sz) => (
-                  <View key={sz} style={s.menuCardPriceRow}>
-                    <Text style={s.menuCardSizeLabel}>{SIZE_LABEL[sz]}</Text>
-                    <Text style={s.menuCardPrice}>
-                      {formatRp(priceFor(v.id, sz))}
-                    </Text>
-                  </View>
-                ))}
-                <Text style={s.menuCardTier}>
-                  Harga {tier === "kuantar" ? "Kuantar" : "Normal"}
-                </Text>
+              <LinearGradient
+                colors={[C.sunny, C.accent, C.primary + "50"]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={s.menuCardImage}
+              >
+                <Text style={s.menuCardEmoji}>🌯</Text>
+              </LinearGradient>
+              <View style={s.menuCardBody}>
+                <Text style={s.menuCardName}>{v.name}</Text>
+                <Text style={s.menuCardDesc}>{v.description}</Text>
+                <View style={s.menuCardPrices}>
+                  {availableSizes.map((sz) => (
+                    <View key={sz} style={s.menuCardPriceRow}>
+                      <Text style={s.menuCardSizeLabel}>{SIZE_LABEL[sz]}</Text>
+                      <Text style={s.menuCardPrice}>
+                        {formatRp(priceFor(v.id, sz))}
+                      </Text>
+                    </View>
+                  ))}
+                  <Text style={s.menuCardTier}>
+                    Harga {tier === "kuantar" ? "Kuantar" : "Normal"}
+                  </Text>
+                </View>
               </View>
-            </View>
-          </TouchableOpacity>
-        ))}
+            </TouchableOpacity>
+          );
+        })}
       </View>
       <View style={{ height: 100 }} />
     </ScrollView>

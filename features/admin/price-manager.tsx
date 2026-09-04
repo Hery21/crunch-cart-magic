@@ -24,10 +24,12 @@ const VARIANT_LABELS: Record<string, string> = {
   filling: "Isi (Filling)",
   tabur: "Tabur",
   celup: "Celup",
+  tabur_celup: "Tabur / Celup",
   filling_tabur: "Isi + Tabur",
   filling_celup: "Isi + Celup",
+  filling_tabur_celup: "Isi + Tabur / Celup",
 };
-const VARIANT_ORDER = Object.keys(VARIANT_LABELS);
+const VARIANT_ORDER = ["original", "filling", "tabur_celup", "filling_tabur_celup"];
 
 /** One row per (variant, size) classification; price applies to every catalog row it covers. */
 interface PriceGroup {
@@ -56,26 +58,45 @@ function modeValue(values: number[]): number {
   return best;
 }
 
+/** Normalize variant names so Tabur & Celup share prices, and Filling+Tabur & Filling+Celup share prices. */
+function getBaseVariant(variant: string): string {
+  if (variant === "tabur" || variant === "celup") return "tabur_celup";
+  if (variant === "filling_tabur" || variant === "filling_celup") return "filling_tabur_celup";
+  return variant;
+}
+
 function buildGroups(catalog: CatalogItem[]): PriceGroup[] {
   const byKey = new Map<string, CatalogItem[]>();
   catalog.forEach((item) => {
-    const key = `${item.variant}__${item.size}`;
+    const baseVariant = getBaseVariant(item.variant);
+    const key = `${baseVariant}__${item.size}`;
     if (!byKey.has(key)) byKey.set(key, []);
     byKey.get(key)!.push(item);
   });
 
   const groups: PriceGroup[] = Array.from(byKey.entries()).map(
-    ([key, items]) => ({
-      key,
-      variant: items[0].variant,
-      size: items[0].size,
-      label: `${VARIANT_LABELS[items[0].variant] ?? items[0].variant} • ${
-        items[0].size === "jumbo" ? "Jumbo" : "Regular"
-      }`,
-      ids: items.map((i) => i.id),
-      price_normal: modeValue(items.map((i) => i.price_normal)),
-      price_kuantar: modeValue(items.map((i) => i.price_kuantar)),
-    }),
+    ([key, items]) => {
+      const baseVariant = getBaseVariant(items[0].variant);
+      const variants = new Set(items.map((i) => i.variant));
+      let displayLabel = VARIANT_LABELS[baseVariant] ?? baseVariant;
+      if (variants.size > 1) {
+        const variantList = Array.from(variants)
+          .map((v) => VARIANT_LABELS[v] ?? v)
+          .join(" / ");
+        displayLabel = variantList;
+      }
+      return {
+        key,
+        variant: baseVariant,
+        size: items[0].size,
+        label: `${displayLabel} • ${
+          items[0].size === "jumbo" ? "Jumbo" : "Regular"
+        }`,
+        ids: items.map((i) => i.id),
+        price_normal: modeValue(items.map((i) => i.price_normal)),
+        price_kuantar: modeValue(items.map((i) => i.price_kuantar)),
+      };
+    },
   );
 
   groups.sort((a, b) => {
@@ -145,7 +166,9 @@ export default function PriceManager() {
       groups.map((group) => [group.key, getGroupPrice(group)]),
     );
     const updatedRows = catalog.map((row) => {
-      const price = priceByGroupKey.get(`${row.variant}__${row.size}`)!;
+      const baseVariant = getBaseVariant(row.variant);
+      const groupKey = `${baseVariant}__${row.size}`;
+      const price = priceByGroupKey.get(groupKey)!;
       return {
         ...row,
         price_normal: price.normal,

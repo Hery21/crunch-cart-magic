@@ -37,6 +37,9 @@ export default function PosScreen() {
   const clock = useClock();
   const pos = usePos();
   const [activeVariant, setActiveVariant] = useState<VariantId | null>(null);
+  const [editingItem, setEditingItem] = useState<
+    (typeof pos.cart)[number] | null
+  >(null);
   const [cartOpen, setCartOpen] = useState(false);
   const [payOpen, setPayOpen] = useState(false);
   const [confirming, setConfirming] = useState(false);
@@ -170,6 +173,10 @@ export default function PosScreen() {
         tier={pos.tier}
         onUpdateQty={pos.updateQty}
         onRemove={pos.removeItem}
+        onEdit={(item) => {
+          setEditingItem(item);
+          setCartOpen(false);
+        }}
         onCheckout={() => {
           setCartOpen(false);
           setPayOpen(true);
@@ -191,6 +198,26 @@ export default function PosScreen() {
         />
       )}
 
+      {editingItem && pos.ready && (
+        <CustomizeModal
+          variantId={editingItem.variantId}
+          catalog={pos.catalog}
+          tier={pos.tier}
+          editItem={editingItem}
+          onClose={() => setEditingItem(null)}
+          onAdd={(item) => {
+            pos.addToCart(item);
+            setEditingItem(null);
+            showFeedback("Ditambahkan ke keranjang");
+          }}
+          onUpdate={(item) => {
+            pos.updateItem(editingItem.id, item);
+            setEditingItem(null);
+            showFeedback("Item diperbarui");
+          }}
+        />
+      )}
+
       <PayDialog
         visible={payOpen}
         paymentMethod={pos.paymentMethod}
@@ -198,6 +225,7 @@ export default function PosScreen() {
         subtotal={pos.subtotal}
         grandTotal={pos.grandTotal}
         cartEmpty={pos.cartCount === 0}
+        disabledPaymentMethods={pos.disabledPaymentMethods}
         onChangePayment={pos.setPaymentMethod}
         onConfirm={() => setConfirming(true)}
         onClose={() => setPayOpen(false)}

@@ -8,7 +8,7 @@ import {
 } from "@/lib/pos-store";
 import {
   type CartItem,
-  DEFAULT_PRICES,
+  PAYMENT_METHODS,
   type PaymentMethod,
   type PriceTier,
   SHEETS_ENDPOINT,
@@ -31,22 +31,20 @@ function toCatalogVariants(variantId: VariantId): string[] {
   return [variantId];
 }
 
-/** Look up the price for a variant+size from the catalog, falling back to DEFAULT_PRICES. */
+/** Look up the price for a variant+size from the live Sheets catalog.
+ * No catalog match means the combo isn't sold — treated as unavailable (0). */
 function catalogPrice(
   catalog: CatalogItem[],
   variantId: VariantId,
   size: Size,
   tier: PriceTier,
 ): number {
-  if (catalog.length > 0) {
-    const variants = toCatalogVariants(variantId);
-    const row = catalog.find(
-      (r) => variants.includes(r.variant) && r.size === size,
-    );
-    if (row) return tier === "kuantar" ? row.price_kuantar : row.price_normal;
-  }
-  // Fallback to DEFAULT_PRICES when catalog is unavailable
-  return DEFAULT_PRICES[variantId]?.[size]?.[tier] ?? 0;
+  const variants = toCatalogVariants(variantId);
+  const row = catalog.find(
+    (r) => variants.includes(r.variant) && r.size === size,
+  );
+  if (!row) return 0;
+  return tier === "kuantar" ? row.price_kuantar : row.price_normal;
 }
 
 export function usePos() {
@@ -98,6 +96,19 @@ export function usePos() {
     return catalogPrice(catalog, variantId, size, tier);
   }
 
+  // Payment methods that would price any item currently in the cart at 0
+  // (i.e. that variant+size isn't sold under that tier) — greyed out in the UI.
+  const disabledPaymentMethods = useMemo(
+    () =>
+      PAYMENT_METHODS.filter((pm) => {
+        const pmTier = tierForPayment(pm);
+        return cart.some(
+          (i) => catalogPrice(catalog, i.variantId, i.size, pmTier) <= 0,
+        );
+      }),
+    [cart, catalog],
+  );
+
   const cartWithPrices = useMemo<PricedCartItem[]>(
     () =>
       cart.map((i) => ({
@@ -148,6 +159,12 @@ export function usePos() {
     setCart((c) => c.filter((i) => i.id !== id));
   }
 
+  function updateItem(id: string, updatedItem: CartItem) {
+    setCart((c) =>
+      c.map((i) => (i.id === id ? updatedItem : i))
+    );
+  }
+
   function clearCart() {
     setCart([]);
   }
@@ -169,11 +186,13 @@ export function usePos() {
     grandTotal: subtotal,
     paymentMethod,
     setPaymentMethod,
+    disabledPaymentMethods,
     tier,
     priceFor,
     addToCart,
     updateQty,
     removeItem,
+    updateItem,
     clearCart,
   };
 }

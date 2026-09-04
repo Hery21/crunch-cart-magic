@@ -19,6 +19,7 @@ interface Props {
   tier: PriceTier;
   onUpdateQty: (id: string, delta: number) => void;
   onRemove: (id: string) => void;
+  onEdit: (item: PricedCartItem) => void;
   onCheckout: () => void;
   onClose: () => void;
 }
@@ -30,6 +31,7 @@ export default function CartSheet({
   tier,
   onUpdateQty,
   onRemove,
+  onEdit,
   onCheckout,
   onClose,
 }: Props) {
@@ -53,7 +55,12 @@ export default function CartSheet({
             ) : (
               <View>
                 {cart.map((item) => (
-                  <View key={item.id} style={s.item}>
+                  <TouchableOpacity
+                    key={item.id}
+                    style={s.item}
+                    onPress={() => onEdit(item)}
+                    activeOpacity={0.7}
+                  >
                     <View style={s.itemHeader}>
                       <View style={{ flex: 1 }}>
                         <View style={s.badges}>
@@ -98,16 +105,23 @@ export default function CartSheet({
                           {formatRp(item.unitPrice)}
                         </Text>
                       </View>
-                      <TouchableOpacity
-                        onPress={() => onRemove(item.id)}
-                        hitSlop={8}
-                      >
+                      <View style={{ alignItems: "center", gap: 8 }}>
                         <Ionicons
-                          name="trash-outline"
-                          size={18}
+                          name="pencil-outline"
+                          size={16}
                           color={C.mutedFg}
                         />
-                      </TouchableOpacity>
+                        <TouchableOpacity
+                          onPress={() => onRemove(item.id)}
+                          hitSlop={8}
+                        >
+                          <Ionicons
+                            name="trash-outline"
+                            size={18}
+                            color={C.mutedFg}
+                          />
+                        </TouchableOpacity>
+                      </View>
                     </View>
                     <View style={s.itemFooter}>
                       <View style={s.qtyRow}>
@@ -133,7 +147,7 @@ export default function CartSheet({
                         {formatRp(item.unitPrice * item.quantity)}
                       </Text>
                     </View>
-                  </View>
+                  </TouchableOpacity>
                 ))}
                 <View style={s.summary}>
                   <View style={s.summaryRow}>

@@ -4,14 +4,20 @@ import { type CartItem, type Transaction } from "./pos-types";
 
 // ─── AsyncStorage polyfill ──────────────────────────────────────────────
 // On web, reuse the single WebAsyncStorage instance registered by web-polyfill.js
-// instead of redefining another localStorage wrapper here.
-let AsyncStorage: typeof import("@react-native-async-storage/async-storage").default;
-if (Platform.OS === "web") {
-  AsyncStorage = (globalThis as any).__REACT_NATIVE_ASYNC_STORAGE__;
-} else {
-  const NativeAsyncStorage =
+// instead of redefining another localStorage wrapper here. Resolved lazily
+// (not at module-eval time) because Expo Router's file-based route scanning
+// can import this module before web-polyfill.js has run and set the global.
+type AsyncStorageLike = typeof import("@react-native-async-storage/async-storage").default;
+let nativeAsyncStorage: AsyncStorageLike | null = null;
+if (Platform.OS !== "web") {
+  nativeAsyncStorage =
     require("@react-native-async-storage/async-storage").default;
-  AsyncStorage = NativeAsyncStorage;
+}
+function getAsyncStorage(): AsyncStorageLike {
+  if (Platform.OS === "web") {
+    return (globalThis as any).__REACT_NATIVE_ASYNC_STORAGE__;
+  }
+  return nativeAsyncStorage as AsyncStorageLike;
 }
 
 const INVOICE_COUNTER_KEY = "ccr.invoiceCounter";
@@ -29,7 +35,8 @@ let useMemoryFallback = false;
 /** Removes obsolete AsyncStorage keys left over from older app versions. */
 export async function clearLegacyStorage(): Promise<void> {
   try {
-    await Promise.all(LEGACY_KEYS.map((key) => AsyncStorage.removeItem(key)));
+    const storage = getAsyncStorage();
+    await Promise.all(LEGACY_KEYS.map((key) => storage.removeItem(key)));
   } catch {
     // best-effort cleanup only
   }
@@ -39,7 +46,7 @@ export async function clearLegacyStorage(): Promise<void> {
 async function safeGetItem(key: string): Promise<string | null> {
   try {
     if (useMemoryFallback) return memoryStore.get(key) ?? null;
-    return await AsyncStorage.getItem(key);
+    return await getAsyncStorage().getItem(key);
   } catch (error) {
     if (
       error instanceof Error &&
@@ -58,7 +65,7 @@ async function safeSetItem(key: string, value: string): Promise<void> {
       memoryStore.set(key, value);
       return;
     }
-    await AsyncStorage.setItem(key, value);
+    await getAsyncStorage().setItem(key, value);
   } catch (error) {
     if (
       error instanceof Error &&
@@ -196,7 +203,7 @@ export async function clearUser(): Promise<void> {
       memoryStore.delete(USER_KEY);
       return;
     }
-    await AsyncStorage.removeItem(USER_KEY);
+    await getAsyncStorage().removeItem(USER_KEY);
   } catch (error) {
     console.warn("Failed to clear user:", error);
   }

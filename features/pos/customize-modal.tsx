@@ -5,7 +5,6 @@ import {
 } from "@/lib/pos-store";
 import {
   CELUPS,
-  DEFAULT_PRICES,
   FILLINGS,
   SIZES,
   SIZE_LABEL,
@@ -21,7 +20,7 @@ import {
 } from "@/lib/pos-types";
 import { C, R } from "@/lib/theme";
 import { Ionicons } from "@expo/vector-icons";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Modal,
   ScrollView,
@@ -37,6 +36,8 @@ interface Props {
   tier: PriceTier;
   onClose: () => void;
   onAdd: (item: CartItem) => void;
+  editItem?: CartItem;
+  onUpdate?: (item: CartItem) => void;
 }
 
 export default function CustomizeModal({
@@ -45,15 +46,20 @@ export default function CustomizeModal({
   tier,
   onClose,
   onAdd,
+  editItem,
+  onUpdate,
 }: Props) {
   const variant = VARIANTS.find((v) => v.id === variantId)!;
+  const isEditing = !!editItem;
 
-  const [size, setSize] = useState<Size>("regular");
-  const [filling, setFilling] = useState<Filling | undefined>();
-  const [sauceMode, setSauceMode] = useState<"celup" | "tabur">("celup");
-  const [celup, setCelup] = useState<Celup | undefined>();
-  const [tabur, setTabur] = useState<Tabur | undefined>();
-  const [qty, setQty] = useState(1);
+  const [size, setSize] = useState<Size>(editItem?.size ?? "regular");
+  const [filling, setFilling] = useState<Filling | undefined>(editItem?.filling);
+  const [sauceMode, setSauceMode] = useState<"celup" | "tabur">(
+    editItem?.tabur ? "tabur" : "celup"
+  );
+  const [celup, setCelup] = useState<Celup | undefined>(editItem?.celup);
+  const [tabur, setTabur] = useState<Tabur | undefined>(editItem?.tabur);
+  const [qty, setQty] = useState(editItem?.quantity ?? 1);
   const [error, setError] = useState("");
 
   /** Resolve catalog variant name based on app variantId + sauceMode. */
@@ -67,20 +73,29 @@ export default function CustomizeModal({
     return [variantId];
   }
 
-  /** Get price for a given size from the catalog, falling back to DEFAULT_PRICES. */
+  /** Price for a given size from the live Sheets catalog. No match means
+   * this combo isn't sold for the current tier — treated as unavailable (0). */
   function priceForSize(sz: Size): number {
-    if (catalog.length > 0) {
-      const variants = catalogVariantsFor();
-      const row = catalog.find(
-        (r) => variants.includes(r.variant) && r.size === sz,
-      );
-      if (row) return tier === "kuantar" ? row.price_kuantar : row.price_normal;
-    }
-    // Fallback to DEFAULT_PRICES
-    return DEFAULT_PRICES[variantId]?.[sz]?.[tier] ?? 0;
+    const variants = catalogVariantsFor();
+    const row = catalog.find(
+      (r) => variants.includes(r.variant) && r.size === sz,
+    );
+    if (!row) return 0;
+    return tier === "kuantar" ? row.price_kuantar : row.price_normal;
   }
 
   const unitPrice = priceForSize(size);
+
+  // A size with price 0 means this variant isn't sold in that size for the
+  // current tier — hide it and fall back to the first size that is available.
+  const availableSizes = SIZES.filter((sz) => priceForSize(sz) > 0);
+  const availableSizesKey = availableSizes.join(",");
+  useEffect(() => {
+    if (availableSizes.length > 0 && !availableSizes.includes(size)) {
+      setSize(availableSizes[0]);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [availableSizesKey, size]);
 
   function buildVariantName(): string {
     const parts: string[] = [];
@@ -114,8 +129,8 @@ export default function CustomizeModal({
       }
     }
 
-    onAdd({
-      id: Math.random().toString(36).slice(2),
+    const newItem = {
+      id: isEditing ? editItem!.id : Math.random().toString(36).slice(2),
       variantId,
       variantName: buildVariantName(),
       size,
@@ -131,7 +146,13 @@ export default function CustomizeModal({
         variant.allowsSauce && sauceMode === "celup" ? celup : undefined,
         variant.allowsSauce && sauceMode === "tabur" ? tabur : undefined,
       ),
-    });
+    };
+
+    if (isEditing && onUpdate) {
+      onUpdate(newItem);
+    } else {
+      onAdd(newItem);
+    }
   }
 
   return (
@@ -158,7 +179,7 @@ export default function CustomizeModal({
               <Text style={{ color: C.destructive }}>*</Text>
             </Text>
             <View style={s.grid2}>
-              {SIZES.map((sz) => (
+              {availableSizes.map((sz) => (
                 <TouchableOpacity
                   key={sz}
                   onPress={() => setSize(sz)}
@@ -325,7 +346,8 @@ export default function CustomizeModal({
               onPress={handleAdd}
             >
               <Text style={s.btnPrimaryText}>
-                Tambah ke Keranjang • {formatRp(unitPrice * qty)}
+                {isEditing ? "Perbarui Item" : "Tambah ke Keranjang"} •{" "}
+                {formatRp(unitPrice * qty)}
               </Text>
             </TouchableOpacity>
           </ScrollView>
