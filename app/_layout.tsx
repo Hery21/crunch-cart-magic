@@ -1,6 +1,7 @@
 // web-polyfill must be imported FIRST
 import "../web-polyfill";
 
+import { clearLegacyStorage } from "@/lib/pos-store";
 import {
   Poppins_400Regular,
   Poppins_500Medium,
@@ -14,7 +15,6 @@ import * as SplashScreen from "expo-splash-screen";
 import { StatusBar } from "expo-status-bar";
 import { useEffect } from "react";
 import { ActivityIndicator, Platform, View } from "react-native";
-import { clearLegacyStorage } from "@/lib/pos-store";
 
 // Prevent splash screen from auto-hiding
 SplashScreen.preventAutoHideAsync();
